@@ -195,10 +195,41 @@ async function claude(env, system, prompt, {maxTokens = 4000, searches = 0, fetc
     if (j.stop_reason !== "pause_turn") break;
     messages.push({role:"assistant", content:j.content});
   }
-  const a = texto.indexOf("{"), b = texto.lastIndexOf("}");
-  let out;
-  try{ out = JSON.parse(texto.slice(a, b + 1)); }catch(e){ throw err("Não consegui interpretar a resposta da IA. Tenta outra vez.", 502); }
+  let out = lerJSON(texto);
+  if (!out){
+    /* 2.ª passagem: a IA converte a sua própria resposta para o formato pedido (resposta estruturada garantida) */
+    try{ out = await formatar(env, system, texto); }catch(e){ out = null; }
+  }
+  if (!out){
+    try{ await ensure(env); await cachePut(env, "dbg:ultima-falha", {quando:new Date().toISOString(), inicio:texto.slice(0, 1500), fim:texto.slice(-1500), tam:texto.length}); }catch(e){}
+    throw err("Não consegui interpretar a resposta da IA. Tenta outra vez.", 502);
+  }
   return {out, fontes:[...fontes.values()]};
+}
+/* tenta ler o JSON de uma resposta (tira texto à volta, blocos ```json e vírgulas a mais) */
+function lerJSON(t){
+  t = String(t || "").replace(/```(?:json)?/gi, "");
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  const bruto = t.slice(a, b + 1);
+  for (const c of [bruto, bruto.replace(/,\s*([}\]])/g, "$1")]){ try{ return JSON.parse(c); }catch(e){} }
+  return null;
+}
+async function formatar(env, systemOriginal, texto){
+  if (!texto || texto.length < 20) return null;
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{"x-api-key":apiKey(env), "anthropic-version":"2023-06-01", "content-type":"application/json"},
+    body:JSON.stringify({model:env.MODEL || "claude-sonnet-5-5", max_tokens:8000,
+      system:"Convertes uma resposta já escrita para o formato JSON pedido, sem acrescentar nem inventar informação. Mantém o português de Portugal. Usa a ferramenta «resultado».",
+      messages:[{role:"user", content:`Instruções originais (com o formato JSON pedido):\n${systemOriginal.slice(0, 6000)}\n\nResposta a converter:\n${texto.slice(-60000)}`}],
+      tools:[{name:"resultado", description:"Devolve o objeto JSON final no formato descrito nas instruções originais.", input_schema:{type:"object", additionalProperties:true}}],
+      tool_choice:{type:"tool", name:"resultado"}})
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return null;
+  const tu = (j.content || []).find(c => c.type === "tool_use");
+  return tu && tu.input && typeof tu.input === "object" && Object.keys(tu.input).length ? tu.input : null;
 }
 async function limiteIA(env, key){
   const lim = +(env.IA_LIMITE_DIA || 40), ck = `ia:${key}:${lisbonDay()}`;
@@ -282,7 +313,7 @@ Regras: 4 a 6 ideias diferentes; prefere ativos acessíveis a um investidor euro
   const prompt = `Carteira (JSON): ${JSON.stringify(body.carteira || {}).slice(0, 20000)}
 Perfil do investidor: ${JSON.stringify(body.perfil || {}).slice(0, 500)}
 Hoje é ${lisbonDay()}.`;
-  const {out, fontes} = await claude(env, system, prompt, {maxTokens:6000, searches:5, fetches:4, fetchDomains:["justetf.com"]});
+  const {out, fontes} = await claude(env, system, prompt, {maxTokens:10000, searches:5, fetches:4, fetchDomains:["justetf.com"]});
   return {quando:Date.now(), upd:Date.now(), resumo:String(out.resumo || ""), alertas:(out.alertas || []).slice(0, 6), ideias:(out.ideias || []).slice(0, 8), fontes:fontes.slice(0, 12)};
 }
 
