@@ -259,6 +259,24 @@ Hoje é ${lisbonDay()}.`;
 }
 
 /* ---------- importar extrato da corretora ---------- */
+/* símbolos no formato das corretoras (XTB, etc.: AAPL.US, VWCE.DE, SAP.DE, ASML.NL) → Yahoo */
+const SUF_CORRETORA = {US:"", UK:".L", DE:".DE", NL:".AS", FR:".PA", PT:".LS", ES:".MC", IT:".MI", BE:".BR", CH:".SW", DK:".CO", SE:".ST", NO:".OL", FI:".HE", PL:".WA", IE:".IR", AT:".VI"};
+function tickerParaYahoo(tk){
+  const m = /^([A-Z0-9.\-]+)\.([A-Z]{2})$/.exec(String(tk || "").trim().toUpperCase());
+  if (!m || !(m[2] in SUF_CORRETORA)) return null;
+  return m[1].replace(/\./g, "-") + SUF_CORRETORA[m[2]];
+}
+const REGRAS_CORRETORA = {
+  xtb:`Ficheiro da XTB: o Excel tem várias folhas (posições abertas, posições fechadas, operações de caixa, ordens pendentes) que repetem os mesmos movimentos. Usa APENAS a folha de operações de caixa (CASH OPERATION HISTORY / Histórico de operações de caixa) para não duplicar:
+- "Stock purchase" / "Compra de ações" (ou tipo semelhante) = compra; a quantidade e o preço estão no comentário, ex.: "OPEN BUY 5 @ 123.45" ou "OPEN BUY 5/10 @ 123.45" (quantidade = primeiro número);
+- "Stock sale" / "Venda de ações" = venda; ex.: "CLOSE BUY 3/5 @ 130.10" (quantidade vendida = 3);
+- a coluna Amount/Montante está na moeda da conta: se a conta for em EUR, o valor absoluto é o "totalEUR" (já inclui conversão cambial e comissões);
+- "DIVIDENT" / "Dividend" / "Dividendo" = dividendo bruto; "Withholding Tax" / "Imposto retido" com o mesmo símbolo e data = imposto; junta-os num item (totalEUR = dividendo − imposto, impostoEUR = imposto, brutoEUR = dividendo);
+- ignora "Free-funds Interest", juros, "deposit", "withdrawal", transferências, "SEC fee", "Sub account transfer" e operações de CFD;
+- copia o símbolo da XTB tal como aparece (ex.: AAPL.US, VWCE.DE, O.US) para "ticker" e põe a bolsa segundo o sufixo (US = EUA, DE = Xetra, UK = Londres, NL = Amesterdão, FR = Paris, PT = Lisboa, ES = Madrid, IT = Milão).
+Se não existir a folha de operações de caixa, usa as posições abertas como compras na data de abertura e as fechadas como compra na abertura + venda no fecho.
+Se a moeda da conta não for EUR, põe totalEUR null e indica valor e moeda na moeda da conta.`
+};
 const TIPO_Y_PREF = {".DE":["XETRA","GER","Xetra","Frankfurt"], ".AS":["Amsterdam"], ".PA":["Paris"], ".MI":["Milan"], ".L":["London","LSE"], ".LS":["Lisbon"], ".SW":["Swiss"], ".MC":["Madrid"], ".BR":["Brussels"]};
 function escolherSimbolo(res, it){
   if (!res.length) return null;
@@ -289,6 +307,7 @@ async function importar(env, key, body){
 Responde APENAS com JSON:
 {"corretora":"nome","resumo":"1 frase","ignorados":"1 frase sobre o que ignoraste (depósitos, levantamentos, câmbios, juros...)",
  "itens":[{"tipo":"compra|venda|dividendo","data":"AAAA-MM-DD","nome":"nome do ativo","isin":"ISIN ou vazio","ticker":"ticker ou vazio","bolsa":"bolsa/mercado se aparecer","qtd":número de unidades (0 nos dividendos),"preco":preço unitário na moeda do ativo,"moeda":"moeda do ativo (EUR, USD, GBP, GBX...)","valor":montante bruto na moeda do ativo (qtd×preço; nos dividendos o bruto),"totalEUR":valor em euros tal como aparece no extrato (compras: total pago COM comissões e taxas; vendas: total recebido JÁ SEM comissões; dividendos: valor líquido recebido depois de impostos) ou null se o extrato não tiver o valor em euros,"comissaoEUR":número ou 0,"impostoEUR":imposto retido nos dividendos em euros ou 0,"brutoEUR":dividendo bruto em euros ou null}]}
+${REGRAS_CORRETORA[String(body.corretora || "").toLowerCase()] || ""}
 Regras: um item por operação executada (junta execuções parciais da mesma ordem no mesmo dia); nas linhas de dividendo junta o dividendo e o imposto retido do mesmo ativo e data num só item; ignora depósitos, levantamentos, conversões de moeda, juros, transferências e ordens canceladas; números com ponto decimal e sempre positivos; não inventes valores; se uma data não tiver ano, usa o mais provável.`;
   const {out} = await claude(env, system, content, {maxTokens:32000});
   let itens = (Array.isArray(out.itens) ? out.itens : []).filter(x => x && ["compra","venda","dividendo"].includes(x.tipo) && /^\d{4}-\d{2}-\d{2}$/.test(String(x.data || ""))).slice(0, 1500);
@@ -297,6 +316,17 @@ Regras: um item por operação executada (junta execuções parciais da mesma or
   const resolvidos = {};
   for (const k of chaves){
     const it = itens.find(x => (x.isin || x.ticker || x.nome) === k);
+    /* 1.º o símbolo da corretora convertido (AAPL.US → AAPL), confirmado no Yahoo */
+    const cand = tickerParaYahoo(it.ticker);
+    if (cand){
+      try{
+        const j = await yahoo(`/v1/finance/search?q=${encodeURIComponent(cand)}&quotesCount=6&newsCount=0&listsCount=0`);
+        const r = (j.quotes || []).find(x => String(x.symbol).toUpperCase() === cand);
+        if (r){ resolvidos[k] = {sym:r.symbol, nomeY:r.longname || r.shortname || r.symbol, tipoY:r.quoteType, setorY:r.sector || "", industriaY:r.industry || "", bolsaY:r.exchDisp || ""}; continue; }
+        const c = await chart(env, cand, "5d");
+        if (c && c.preco){ resolvidos[k] = {sym:cand, nomeY:c.nome, tipoY:c.tipoY === "ETF" ? "ETF" : c.tipoY === "CRYPTOCURRENCY" ? "CRYPTOCURRENCY" : "EQUITY", setorY:"", industriaY:"", bolsaY:c.bolsa}; continue; }
+      }catch(e){}
+    }
     for (const q of [it.isin, it.ticker, it.nome].filter(Boolean)){
       try{
         const j = await yahoo(`/v1/finance/search?q=${encodeURIComponent(String(q).slice(0, 60))}&quotesCount=8&newsCount=0&listsCount=0`);

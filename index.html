@@ -746,7 +746,7 @@ $("#dlg").addEventListener("click", e => { if (e.target.id === "dlg") fecharDlg(
 
 /* ---------- IMPORTAR EXTRATO ---------- */
 const CORRETORAS = ["Degiro","Trading 212","XTB","Interactive Brokers","Revolut","Trade Republic","Lightyear","Banco / outra"];
-const DICAS = {"Degiro":"Caixa de entrada › Transações e Conta › Exportar CSV (envia os dois: o de Transações traz as compras e vendas, o de Conta traz os dividendos).", "Trading 212":"Histórico › Exportar (CSV), com compras, vendas e dividendos.", "XTB":"xStation › Histórico da conta › Exportar para Excel.", "Interactive Brokers":"Relatórios › Extratos › Atividade › CSV.", "Revolut":"Investimentos › … › Documentos › Extrato da conta (CSV ou PDF).", "Trade Republic":"Perfil › Atividade › extratos em PDF (podes enviar vários).", "Lightyear":"Conta › Extratos › CSV.", "Banco / outra":"Qualquer extrato em CSV, Excel, PDF ou foto legível."};
+const DICAS = {"Degiro":"Caixa de entrada › Transações e Conta › Exportar CSV (envia os dois: o de Transações traz as compras e vendas, o de Conta traz os dividendos).", "Trading 212":"Histórico › Exportar (CSV), com compras, vendas e dividendos.", "XTB":"No xStation 5 (no computador ou em xstation5.xtb.com): separador Histórico, escolhe as datas desde a abertura da conta e exporta para Excel (.xlsx). Envia o ficheiro inteiro: a app usa só as operações de caixa, por isso não duplica nada. Os extratos mensais em PDF também servem.", "Interactive Brokers":"Relatórios › Extratos › Atividade › CSV.", "Revolut":"Investimentos › … › Documentos › Extrato da conta (CSV ou PDF).", "Trade Republic":"Perfil › Atividade › extratos em PDF (podes enviar vários).", "Lightyear":"Conta › Extratos › CSV.", "Banco / outra":"Qualquer extrato em CSV, Excel, PDF ou foto legível."};
 let IMP = [], impMeta = {};
 function abrirImport(){
   if (!L.code) return toast("Liga primeiro o servidor nas Definições.");
@@ -770,14 +770,16 @@ function carregarXLSX(){
   if (window.XLSX) return Promise.resolve();
   return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload = ok; sc.onerror = () => ko(new Error("Não consegui abrir o leitor de Excel. Exporta em CSV.")); document.head.appendChild(sc); });
 }
+/* tira linhas que só gastam leitura (juros diários da XTB, etc.) */
+const limparTexto = t => t.split(/\r?\n/).filter(l => !/free.?funds interest|juros de fundos livres|^[,;\s]*$/i.test(l)).join("\n");
 async function ficheiroParaEnvio(f){
   const nome = f.name || "extrato", ext = (nome.split(".").pop() || "").toLowerCase();
   if (f.size > 15 * 1024 * 1024) throw new Error(`${nome}: ficheiro demasiado grande (máximo 15 MB).`);
-  if (["csv","txt","tsv"].includes(ext) || /^text\//.test(f.type)) return {nome, texto:await textoDe(f)};
+  if (["csv","txt","tsv"].includes(ext) || /^text\//.test(f.type)) return {nome, texto:limparTexto(await textoDe(f))};
   if (["xlsx","xls"].includes(ext)){
     await carregarXLSX();
     const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:"array", cellDates:true});
-    return {nome, texto:wb.SheetNames.map(n => `### Folha: ${n}\n` + XLSX.utils.sheet_to_csv(wb.Sheets[n], {dateNF:"yyyy-mm-dd"})).join("\n\n")};
+    return {nome, texto:limparTexto(wb.SheetNames.map(n => `### Folha: ${n}\n` + XLSX.utils.sheet_to_csv(wb.Sheets[n], {dateNF:"yyyy-mm-dd"})).join("\n\n"))};
   }
   if (ext === "pdf" || f.type === "application/pdf") return {nome, mime:"application/pdf", b64:await b64De(f)};
   if (/^image\//.test(f.type)) return {nome, mime:f.type, b64:await b64De(f)};
