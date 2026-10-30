@@ -7,6 +7,9 @@ App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincr
 - Exposição por setor (incluindo o interior dos ETFs), por classe de ativo, por ativo e por moeda, com alertas de concentração.
 - Análise técnica (médias de 50/200 dias, RSI, MACD, suportes e resistências, volatilidade).
 - Análise fundamental e sugestões de investimento com IA (Claude com pesquisa na web, com fontes).
+- Dividendos: histórico detetado automaticamente, registo do valor líquido recebido, previsão para 12 meses e rendimento.
+- Análise e sugestões de ETFs com dados lidos no justETF (TER, tamanho, replicação, distribuição, rentabilidade).
+- Importação de extratos de corretoras (CSV, Excel, PDF ou imagem) com revisão antes de guardar.
 - Tema claro e escuro; instalável no ecrã principal do iPhone.
 
 ## Ficheiros

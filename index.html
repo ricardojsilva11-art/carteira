@@ -52,7 +52,7 @@ main{flex:1;min-width:0;padding:28px 36px 60px;max-width:1240px}
   .side{display:none}
   main{padding:calc(14px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
   .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--side);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around}
-  .tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:58px;min-height:48px;color:var(--txt3);text-decoration:none;font-size:11px}
+  .tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:52px;flex:1;min-height:48px;color:var(--txt3);text-decoration:none;font-size:11px}
   .tabbar a.on{color:var(--txt);font-weight:600}
 }
 svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -123,6 +123,12 @@ input.in:focus,select.in:focus,textarea.in:focus{outline:2px solid var(--acc);ou
 .fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:520px){.fgrid{grid-template-columns:1fr}}
 dialog{border:none;border-radius:16px;padding:0;background:var(--card);color:var(--txt);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 40px);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+dialog.wide{width:min(1040px,calc(100vw - 24px))}
+.drop{border:2px dashed var(--line2);border-radius:12px;padding:26px 16px;text-align:center;color:var(--txt2);cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center}
+.drop.on{border-color:var(--acc);background:var(--card2)}
+.imp td{padding:7px 5px;font-size:13.5px}
+.imp input.in{min-height:36px;font-size:14px;padding:0 8px}
+.imp tr.dup td{opacity:.55}
 dialog::backdrop{background:rgba(5,10,15,.55)}
 .dlg{padding:20px;display:flex;flex-direction:column;gap:14px}
 .dlg h3{margin:0;font-size:19px}
@@ -153,6 +159,8 @@ dialog::backdrop{background:rgba(5,10,15,.55)}
   <symbol id="i-an" viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></symbol>
   <symbol id="i-ia" viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
   <symbol id="i-def" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-div" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.4a3.5 3.5 0 0 0-3-1.4c-1.7 0-3 .9-3 2.2 0 3 6 1.6 6 4.6 0 1.3-1.3 2.2-3 2.2a3.6 3.6 0 0 1-3.2-1.6"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
   <symbol id="i-sync" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
@@ -184,7 +192,7 @@ const SETORES = ["Tecnologia","Saúde","Financeiro","Consumo cíclico","Consumo 
 const COR_SETOR = {"Tecnologia":"#6EA8FE","Saúde":"#F27E9B","Financeiro":"#4FC1B0","Consumo cíclico":"#E8D36A","Consumo básico":"#A3D977","Industrial":"#8FA3BF","Energia":"#E0704F","Materiais":"#C9A27E","Imobiliário":"#B48CF2","Comunicações":"#5FD3E8","Utilities":"#7FC8A9","Cripto":"#F7931A","Obrigações":"#9DB4FF","Outros":"#6B7785"};
 const TIPOS = ["Ação","ETF","REIT","Cripto","Obrigações","Fundo"];
 const COR_TIPO = {"Ação":"#4FC1B0","ETF":"#6EA8FE","REIT":"#B48CF2","Cripto":"#F7931A","Obrigações":"#9DB4FF","Fundo":"#E8D36A"};
-const VIEWS = [["painel","Painel","i-painel"],["posicoes","Posições","i-pos"],["exposicao","Exposição","i-exp"],["analise","Análise","i-an"],["sugestoes","Sugestões IA","i-ia"],["definicoes","Definições","i-def"]];
+const VIEWS = [["painel","Painel","i-painel"],["posicoes","Posições","i-pos"],["dividendos","Dividendos","i-div"],["exposicao","Exposição","i-exp"],["analise","Análise","i-an"],["sugestoes","Sugestões IA","i-ia"],["definicoes","Definições","i-def"]];
 
 /* ---------- utilitários ---------- */
 const $ = s => document.querySelector(s);
@@ -295,8 +303,9 @@ function precoEUR(sym){ const p = P.precos[sym]; if (!p) return NaN; return p.pr
 function posicoes(){
   const by = {};
   vivos("ops").slice().sort((a, b) => (a.data || "").localeCompare(b.data || "") || (a.criado || 0) - (b.criado || 0)).forEach(o => {
-    const p = by[o.sym] = by[o.sym] || {sym:o.sym, qtd:0, custo:0, realizado:0, ops:[]};
+    const p = by[o.sym] = by[o.sym] || {sym:o.sym, qtd:0, custo:0, realizado:0, divRec:0, ops:[]};
     const q = +o.qtd || 0, t = +o.total || 0;
+    if (o.tipo === "dividendo"){ p.divRec += t; p.ops.push(o); return; }
     if (o.tipo === "venda"){
       const medio = p.qtd > 0 ? p.custo / p.qtd : 0, qv = Math.min(q, p.qtd);
       p.custo -= medio * qv; p.realizado += t - medio * qv; p.qtd -= qv;
@@ -309,7 +318,9 @@ function posicoes(){
     const unit = precoEUR(p.sym);
     const valor = p.qtd * unit;
     const varDia = pr.preco && pr.anterior ? p.qtd * (pr.preco - pr.anterior) * escalaMoeda(pr.moeda) * fxAgora(pr.moeda) : 0;
-    return Object.assign(p, {nome:a.nome || pr.nome || p.sym, tipo:a.tipo || "Ação", setores:a.setores || {"Outros":100}, moeda:pr.moeda || a.moeda || "", precoLocal:pr.preco, valor, ganho:valor - p.custo, rend:p.custo > 0 ? (valor - p.custo) / p.custo : 0, varDia, varDiaPct:pr.anterior ? pr.preco / pr.anterior - 1 : 0, temPreco:isFinite(valor)});
+    const dps12 = dps12m(p.sym), escFx = escalaMoeda(pr.moeda) * fxAgora(pr.moeda);
+    const divPrev = p.qtd * dps12 * escFx;
+    return Object.assign(p, {divPrev:isFinite(divPrev) ? divPrev : 0, nome:a.nome || pr.nome || p.sym, tipo:a.tipo || "Ação", setores:a.setores || {"Outros":100}, moeda:pr.moeda || a.moeda || "", precoLocal:pr.preco, valor, ganho:valor - p.custo, rend:p.custo > 0 ? (valor - p.custo) / p.custo : 0, varDia, varDiaPct:pr.anterior ? pr.preco / pr.anterior - 1 : 0, temPreco:isFinite(valor)});
   });
 }
 function totais(ps){
@@ -318,7 +329,10 @@ function totais(ps){
   const custo = ab.reduce((s, p) => s + p.custo, 0);
   const realizado = ps.reduce((s, p) => s + p.realizado, 0);
   const dia = ab.reduce((s, p) => s + (p.temPreco ? p.varDia : 0), 0);
-  return {valor, custo, ganho:valor - custo, rend:custo > 0 ? (valor - custo) / custo : 0, realizado, dia, diaPct:valor - dia > 0 ? dia / (valor - dia) : 0, n:ab.length};
+  const divRec = ps.reduce((s, p) => s + p.divRec, 0), divPrev = ab.reduce((s, p) => s + p.divPrev, 0);
+  const lim = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+  const div12 = vivos("ops").filter(o => o.tipo === "dividendo" && o.data >= lim).reduce((s, o) => s + (+o.total || 0), 0);
+  return {divRec, divPrev, div12, valor, custo, ganho:valor - custo, rend:custo > 0 ? (valor - custo) / custo : 0, realizado, dia, diaPct:valor - dia > 0 ? dia / (valor - dia) : 0, n:ab.length};
 }
 function exposicao(ps){
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0) || 1;
@@ -340,6 +354,44 @@ function alertas(ex){
   const usd = ex.moedas.find(m => m[0] === "USD"); if (usd && usd[1] > .5) out.push(`${pct(usd[1])} está em dólares: o câmbio euro/dólar também mexe no teu resultado.`);
   return out;
 }
+/* ---------- dividendos ---------- */
+/* dividendos por unidade nos últimos 12 meses (moeda do ativo) */
+function dps12m(sym){
+  const lim = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+  return (((P.precos[sym] || {}).divs) || []).filter(d => d[0] >= lim).reduce((s, d) => s + d[1], 0);
+}
+function qtdEm(sym, dia){ /* unidades detidas antes da data ex-dividendo */
+  let q = 0;
+  vivos("ops").filter(o => o.sym === sym && o.data < dia && o.tipo !== "dividendo").sort((a, b) => a.data.localeCompare(b.data)).forEach(o => { q = o.tipo === "venda" ? Math.max(0, q - (+o.qtd || 0)) : q + (+o.qtd || 0); });
+  return q;
+}
+function fxEm(moeda, dia){
+  const c = moedaFx(moeda); if (c === "EUR") return 1;
+  let r = null; for (const h of ((P.fx[c] || {}).hist || [])){ if (h[0] <= dia) r = h[1]; else break; }
+  return r || fxAgora(moeda);
+}
+/* pagamentos: registados (movimentos «dividendo») + estimados a partir do histórico do Yahoo */
+function pagamentos(){
+  const reg = vivos("ops").filter(o => o.tipo === "dividendo").map(o => ({id:o.id, sym:o.sym, data:o.data, liquido:+o.total || 0, imposto:+o.imposto || 0, bruto:o.bruto || null, registado:true}));
+  const est = [];
+  [...new Set(vivos("ops").map(o => o.sym))].forEach(sym => {
+    const p = P.precos[sym]; if (!p || !p.divs) return;
+    const primeira = vivos("ops").filter(o => o.sym === sym && o.tipo !== "dividendo").map(o => o.data).sort()[0];
+    /* cada dividendo registado corresponde a um só pagamento: o mais recente com data ex até 60 dias antes */
+    const evs = p.divs.filter(([dia]) => primeira && dia > primeira).map(([dia, amt]) => ({dia, amt, usado:false}));
+    reg.filter(r => r.sym === sym).sort((x, y) => x.data.localeCompare(y.data)).forEach(r => {
+      const cand = evs.filter(e => !e.usado && e.dia <= r.data && (new Date(r.data) - new Date(e.dia)) / 864e5 <= 60).pop();
+      if (cand) cand.usado = true;
+    });
+    evs.filter(e => !e.usado).forEach(({dia, amt}) => {
+      const q = qtdEm(sym, dia); if (!(q > 0)) return;
+      const bruto = q * amt * escalaMoeda(p.moeda) * fxEm(p.moeda, dia);
+      est.push({sym, data:dia, bruto, porUnidade:amt, moeda:p.moeda, qtd:q, registado:false});
+    });
+  });
+  return reg.concat(est).sort((a, b) => b.data.localeCompare(a.data));
+}
+
 /* evolução diária: valor da carteira vs. valor investido */
 function historico(){
   const ops = vivos("ops").slice().sort((a, b) => (a.data || "").localeCompare(b.data || ""));
@@ -357,6 +409,7 @@ function historico(){
     while (oi < ops.length && ops[oi].data <= d){
       const o = ops[oi++], s = o.sym, qq = +o.qtd || 0, t = +o.total || 0;
       q[s] = q[s] || 0; custo[s] = custo[s] || 0;
+      if (o.tipo === "dividendo") continue;
       if (o.tipo === "venda"){ const m = q[s] > 0 ? custo[s] / q[s] : 0, qv = Math.min(qq, q[s]); custo[s] -= m * qv; q[s] -= qv; }
       else { q[s] += qq; custo[s] += t; }
     }
@@ -447,7 +500,7 @@ function rota(){ const h = (location.hash || "#painel").slice(1).split("/"); VIE
 window.addEventListener("hashchange", rota);
 function navs(){
   $("#nav").innerHTML = VIEWS.map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[1]}</a>`).join("");
-  $("#tabbar").innerHTML = VIEWS.filter(v => v[0] !== "exposicao").map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[0] === "sugestoes" ? "IA" : v[1]}</a>`).join("");
+  $("#tabbar").innerHTML = VIEWS.filter(v => v[0] !== "exposicao").map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[0] === "sugestoes" ? "IA" : v[0] === "definicoes" ? "Ajustes" : v[1]}</a>`).join("");
 }
 function footer(){
   const q = P.quando ? new Date(P.quando).toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"}) : "—";
@@ -463,7 +516,7 @@ function renderBg(){
 function render(){
   aplicarTema(); navs();
   const m = $("#main");
-  const f = {painel:vPainel, posicoes:vPosicoes, exposicao:vExposicao, analise:vAnalise, sugestoes:vSugestoes, definicoes:vDefinicoes}[VIEW];
+  const f = {painel:vPainel, posicoes:vPosicoes, dividendos:vDividendos, exposicao:vExposicao, analise:vAnalise, sugestoes:vSugestoes, definicoes:vDefinicoes}[VIEW];
   f(m); footer();
 }
 
@@ -471,7 +524,7 @@ function render(){
 let periodo = store.get("cart.periodo", "1A");
 function semDados(m){
   m.innerHTML = `<div class="card empty"><h2>Ainda não tens investimentos</h2><p>Adiciona a primeira compra: ação, ETF, REIT ou cripto. A app vai buscar o preço sozinha e mostra-te o resultado, os setores e os gráficos.</p>
-  <p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar investimento</button>${L.code ? "" : '<a class="btn" href="#definicoes">Ligar ao servidor</a>'}</p></div>`;
+  <p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar investimento</button><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato da corretora</button>${L.code ? "" : '<a class="btn" href="#definicoes">Ligar ao servidor</a>'}</p></div>`;
 }
 function vPainel(m){
   const ps = posicoes(), t = totais(ps);
@@ -484,6 +537,7 @@ function vPainel(m){
       <span class="muted" style="font-size:14px">Valor da carteira</span>
       <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span class="big mono">${eur(t.valor)}</span>
       <span class="mono ${tone(t.ganho)}" style="font-size:17px">${eurS(t.ganho)} (${pctS(t.rend)})</span></div>
+      ${t.divRec || t.realizado ? `<span class="muted" style="font-size:13px">Com dividendos e vendas: <span class="mono ${tone(t.ganho + t.divRec + t.realizado)}">${eurS(t.ganho + t.divRec + t.realizado)}</span></span>` : ""}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="atualizarPrecos(true)" aria-label="Atualizar preços"><svg class="i"><use href="#i-sync"/></svg><span>Atualizar</span></button>
@@ -493,8 +547,8 @@ function vPainel(m){
   <div class="grid4">
     <div class="card kpi"><span class="lab">Total investido</span><span class="v mono">${eur(t.custo)}</span></div>
     <div class="card kpi"><span class="lab">Resultado hoje</span><span class="v mono ${tone(t.dia)}">${eurS(t.dia)} <span style="font-size:14px">${pctS(t.diaPct)}</span></span></div>
-    <div class="card kpi"><span class="lab">Melhor posição</span><span class="v" style="font-size:17px">${ab[0] ? `${esc(ab[0].sym)} <span class="mono ${tone(ab[0].rend)}">${pctS(ab[0].rend)}</span>` : "—"}</span></div>
-    <div class="card kpi"><span class="lab">Posição mais fraca</span><span class="v" style="font-size:17px">${ab.length > 1 ? `${esc(ab[ab.length - 1].sym)} <span class="mono ${tone(ab[ab.length - 1].rend)}">${pctS(ab[ab.length - 1].rend)}</span>` : "—"}</span></div>
+    <a class="card kpi" href="#dividendos" style="text-decoration:none;color:inherit"><span class="lab">Dividendos · 12 meses</span><span class="v mono">${eur(t.div12)}</span><span class="sub">previsão: ${eur(t.divPrev, 0)}/ano</span></a>
+    <div class="card kpi"><span class="lab">Melhor / mais fraca</span><span style="font-size:15px;font-weight:600;line-height:1.5">${ab[0] ? `${esc(ab[0].sym)} <span class="mono ${tone(ab[0].rend)}">${pctS(ab[0].rend)}</span>` : "—"}<br>${ab.length > 1 ? `${esc(ab[ab.length - 1].sym)} <span class="mono ${tone(ab[ab.length - 1].rend)}">${pctS(ab[ab.length - 1].rend)}</span>` : ""}</span></div>
   </div>
   <div class="row">
     <div class="card f2">
@@ -578,12 +632,12 @@ function vPosicoes(m){
   const ps = posicoes(), t = totais(ps);
   const abertas = ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor), fechadas = ps.filter(p => p.qtd <= 0);
   const ops = vivos("ops").slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-  m.innerHTML = `<div class="head"><h1>Posições</h1><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar compra ou venda</button></div>
+  m.innerHTML = `<div class="head"><h1>Posições</h1><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato</button><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div></div>
   <div class="card" style="margin-bottom:14px">${tabelaPos(abertas, false)}
   <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca numa posição para ver o detalhe, editar setores ou analisar.</p></div>
   ${fechadas.length ? `<div class="card" style="margin-bottom:14px"><h2>Posições fechadas</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Resultado realizado</th></tr></thead><tbody>${fechadas.map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></td><td class="r mono ${tone(p.realizado)}">${eurS(p.realizado)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
   <div class="card"><h2>Movimentos</h2><div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th>Operação</th><th class="r">Quantidade</th><th class="r">Total (€)</th><th class="r">Preço médio</th><th></th></tr></thead><tbody>
-  ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym)}</td><td><span class="pill ${o.tipo === "venda" ? "down" : "up"}">${o.tipo === "venda" ? "Venda" : "Compra"}</span></td><td class="r mono">${esc(String(o.qtd).replace(".", ","))}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
+  ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym)}</td><td><span class="pill ${o.tipo === "venda" ? "down" : o.tipo === "dividendo" ? "" : "up"}">${o.tipo === "venda" ? "Venda" : o.tipo === "dividendo" ? "Dividendo" : "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${o.tipo === "dividendo" ? "—" : esc(String(o.qtd).replace(".", ","))}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${o.tipo !== "dividendo" && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
   </tbody></table></div></div>`;
 }
 function verAtivo(sym){
@@ -616,26 +670,33 @@ async function reclassificar(sym){
 
 /* ---------- adicionar / editar movimento ---------- */
 let escolhido = null, buscaT = null;
-function abrirOp(id, pre){
+function abrirOp(id, pre, tipoIni){
   const o = id ? vivos("ops").find(x => x.id === id) : null;
   escolhido = o ? Object.assign({sym:o.sym}, ativo(o.sym) || {}, {nome:(ativo(o.sym) || {}).nome || o.sym}) : (pre ? {sym:pre.sym, nome:pre.nome, tipoY:pre.tipoY || "", tipo:pre.tipo || ""} : null);
   dlg(`<h3>${o ? "Editar movimento" : "Adicionar investimento"}</h3>
-  <div class="seg" role="group" aria-label="Operação" style="align-self:flex-start"><button type="button" id="opC" class="${!o || o.tipo !== "venda" ? "on" : ""}" onclick="setOpTipo('compra')">Compra</button><button type="button" id="opV" class="${o && o.tipo === "venda" ? "on" : ""}" onclick="setOpTipo('venda')">Venda</button></div>
+  <div class="seg" role="group" aria-label="Operação" style="align-self:flex-start"><button type="button" id="opC" onclick="setOpTipo('compra')">Compra</button><button type="button" id="opV" onclick="setOpTipo('venda')">Venda</button><button type="button" id="opD" onclick="setOpTipo('dividendo')">Dividendo</button></div>
   <label class="f">Ativo (ação, ETF, REIT ou cripto)<input class="in" id="oBusca" autocomplete="off" placeholder="Ex.: Apple, VWCE, Realty Income, Bitcoin" value="${escolhido ? esc(escolhido.sym + " · " + (escolhido.nome || "")) : ""}" oninput="buscar(this.value)" ${o ? "disabled" : ""}></label>
   <div id="oRes" class="results hide" role="listbox" aria-label="Resultados"></div>
   <div class="fgrid">
     <label class="f">Data<input class="in" id="oData" type="date" value="${o ? o.data : hoje()}" max="${hoje()}"></label>
-    <label class="f">Quantidade (unidades)<input class="in mono" id="oQtd" inputmode="decimal" placeholder="Ex.: 10 ou 0,05" value="${o ? String(o.qtd).replace(".", ",") : ""}" oninput="calcMedio()"></label>
+    <label class="f" id="oQtdL">Quantidade (unidades)<input class="in mono" id="oQtd" inputmode="decimal" placeholder="Ex.: 10 ou 0,05" value="${o ? String(o.qtd).replace(".", ",") : ""}" oninput="calcMedio()"></label>
     <label class="f"><span id="oTotLab">Total pago em euros (com comissões)</span><input class="in mono" id="oTot" inputmode="decimal" placeholder="Ex.: 1500" value="${o ? String(o.total).replace(".", ",") : ""}" oninput="calcMedio()"></label>
-    <label class="f">Preço médio por unidade<input class="in mono" id="oMedio" disabled value=""></label>
+    <label class="f" id="oMedioL">Preço médio por unidade<input class="in mono" id="oMedio" disabled value=""></label>
+    <label class="f hide" id="oImpL">Imposto retido em euros (opcional)<input class="in mono" id="oImp" inputmode="decimal" placeholder="Ex.: 4,20" value="${o && o.imposto ? String(o.imposto).replace(".", ",") : ""}"></label>
   </div>
   <label class="f">Nota (opcional)<input class="in" id="oNota" value="${o ? esc(o.nota || "") : ""}" placeholder="Ex.: corretora, estratégia"></label>
   <div class="acts">${o ? `<button class="btn" style="margin-right:auto;color:var(--down)" onclick="apagarOp('${o.id}')">Apagar</button>` : ""}<button class="btn" onclick="fecharDlg()">Cancelar</button><button class="btn pri" id="oOk" onclick="guardarOp('${o ? o.id : ""}')">Guardar</button></div>`);
-  dlgTipo = o ? o.tipo || "compra" : "compra"; setOpTipo(dlgTipo); calcMedio();
+  dlgTipo = o ? o.tipo || "compra" : (tipoIni || "compra"); setOpTipo(dlgTipo); calcMedio();
+  if (pre && pre.data) $("#oData").value = pre.data;
   if (!o && !escolhido) setTimeout(() => $("#oBusca").focus(), 50);
 }
 let dlgTipo = "compra";
-function setOpTipo(t){ dlgTipo = t; const c = $("#opC"), v = $("#opV"); if (!c) return; c.classList.toggle("on", t === "compra"); v.classList.toggle("on", t === "venda"); $("#oTotLab").textContent = t === "venda" ? "Total recebido em euros (já sem comissões)" : "Total pago em euros (com comissões)"; }
+function setOpTipo(t){
+  dlgTipo = t; const c = $("#opC"); if (!c) return;
+  c.classList.toggle("on", t === "compra"); $("#opV").classList.toggle("on", t === "venda"); $("#opD").classList.toggle("on", t === "dividendo");
+  $("#oTotLab").textContent = t === "venda" ? "Total recebido em euros (já sem comissões)" : t === "dividendo" ? "Valor líquido recebido em euros" : "Total pago em euros (com comissões)";
+  ["#oQtdL", "#oMedioL"].forEach(id => $(id).classList.toggle("hide", t === "dividendo")); $("#oImpL").classList.toggle("hide", t !== "dividendo");
+}
 function calcMedio(){ const q = num(($("#oQtd") || {}).value), t = num(($("#oTot") || {}).value), el = $("#oMedio"); if (el) el.value = q > 0 && t > 0 ? eur(t / q, t / q < 1 ? 6 : 2) : ""; }
 function buscar(q){
   escolhido = null; clearTimeout(buscaT);
@@ -660,26 +721,177 @@ async function guardarOp(id){
   const sel = escolhido;
   const qtd = num($("#oQtd").value), total = num($("#oTot").value), data = $("#oData").value;
   if (!escolhido) return toast("Escolhe o ativo na lista de resultados.");
-  if (!(qtd > 0)) return toast("Indica a quantidade.");
+  if (dlgTipo !== "dividendo" && !(qtd > 0)) return toast("Indica a quantidade.");
   if (!(total > 0)) return toast("Indica o valor em euros.");
   if (!data) return toast("Indica a data.");
   if (dlgTipo === "venda"){ const p = posicoes().find(x => x.sym === escolhido.sym), tem = p ? p.qtd + (id ? (+(vivos("ops").find(o => o.id === id) || {}).qtd || 0) : 0) : 0; if (qtd > tem + 1e-9) return toast("Não tens unidades suficientes para esta venda."); }
-  const o = Object.assign({}, id ? vivos("ops").find(x => x.id === id) : {id:uid(), criado:Date.now()}, {sym:escolhido.sym, tipo:dlgTipo, data, qtd, total, nota:$("#oNota").value.trim()});
+  const imp = num(($("#oImp") || {}).value);
+  const o = Object.assign({}, id ? vivos("ops").find(x => x.id === id) : {id:uid(), criado:Date.now()}, {sym:escolhido.sym, tipo:dlgTipo, data, qtd:dlgTipo === "dividendo" ? 0 : qtd, total, imposto:dlgTipo === "dividendo" && imp > 0 ? imp : 0, nota:$("#oNota").value.trim()});
   upsert("ops", o);
-  const novo = !ativo(escolhido.sym);
-  if (novo) upsert("ativos", {id:escolhido.sym, nome:escolhido.nome, tipoY:escolhido.tipoY || "", tipo:escolhido.tipoY === "ETF" ? "ETF" : escolhido.tipoY === "CRYPTOCURRENCY" ? "Cripto" : "Ação", setores:escolhido.tipoY === "CRYPTOCURRENCY" ? {"Cripto":100} : {"Outros":100}, fonte:"pendente"});
-  fecharDlg(); render(); toast(id ? "Movimento atualizado." : "Investimento adicionado.");
+  const existe = ativo(sel.sym), novo = !existe || existe.fonte === "pendente";
+  if (!existe) upsert("ativos", {id:escolhido.sym, nome:escolhido.nome, tipoY:escolhido.tipoY || "", tipo:escolhido.tipoY === "ETF" ? "ETF" : escolhido.tipoY === "CRYPTOCURRENCY" ? "Cripto" : "Ação", setores:escolhido.tipoY === "CRYPTOCURRENCY" ? {"Cripto":100} : {"Outros":100}, fonte:"pendente"});
+  else if (!existe.nome && sel.nome) upsert("ativos", Object.assign({}, existe, {nome:sel.nome}));
+  fecharDlg(); render(); toast(id ? "Movimento atualizado." : dlgTipo === "dividendo" ? "Dividendo registado." : dlgTipo === "venda" ? "Venda registada." : "Investimento adicionado.");
   if (novo && L.code){
-    api("/api/classificar", {sym:sel.sym, nome:sel.nome, tipoY:sel.tipoY, setorY:sel.setorY, industriaY:sel.industriaY})
+    api("/api/classificar", {sym:sel.sym, nome:sel.nome, tipoY:sel.tipoY || (existe || {}).tipoY, setorY:sel.setorY, industriaY:sel.industriaY})
       .then(c => { const a = ativo(o.sym) || {}; upsert("ativos", Object.assign({}, a, {id:o.sym, tipo:c.tipo, setores:c.setores, nota:c.nota || "", fonte:c.fonte})); renderBg(); })
       .catch(e => toast("Setores: " + e.message, 4500));
   }
   atualizarPrecos(true);
 }
 function apagarOp(id){ if (!confirm("Apagar este movimento?")) return; const o = vivos("ops").find(x => x.id === id); upsert("ops", Object.assign({}, o, {del:true})); fecharDlg(); render(); toast("Movimento apagado."); }
-function dlg(html){ $("#dlgBody").innerHTML = html; const d = $("#dlg"); if (!d.open) d.showModal(); }
+function dlg(html, largo){ $("#dlgBody").innerHTML = html; const d = $("#dlg"); d.classList.toggle("wide", !!largo); if (!d.open) d.showModal(); }
 function fecharDlg(){ const d = $("#dlg"); if (d.open) d.close(); }
 $("#dlg").addEventListener("click", e => { if (e.target.id === "dlg") fecharDlg(); });
+
+/* ---------- IMPORTAR EXTRATO ---------- */
+const CORRETORAS = ["Degiro","Trading 212","XTB","Interactive Brokers","Revolut","Trade Republic","Lightyear","Banco / outra"];
+const DICAS = {"Degiro":"Caixa de entrada › Transações e Conta › Exportar CSV (envia os dois: o de Transações traz as compras e vendas, o de Conta traz os dividendos).", "Trading 212":"Histórico › Exportar (CSV), com compras, vendas e dividendos.", "XTB":"xStation › Histórico da conta › Exportar para Excel.", "Interactive Brokers":"Relatórios › Extratos › Atividade › CSV.", "Revolut":"Investimentos › … › Documentos › Extrato da conta (CSV ou PDF).", "Trade Republic":"Perfil › Atividade › extratos em PDF (podes enviar vários).", "Lightyear":"Conta › Extratos › CSV.", "Banco / outra":"Qualquer extrato em CSV, Excel, PDF ou foto legível."};
+let IMP = [], impMeta = {};
+function abrirImport(){
+  if (!L.code) return toast("Liga primeiro o servidor nas Definições.");
+  const cor = store.get("cart.corretora", "Degiro");
+  dlg(`<h3>Importar extrato da corretora</h3>
+  <label class="f">Corretora<select class="in" id="iCor" onchange="store.set('cart.corretora', this.value); $('#iDica').textContent = DICAS[this.value] || ''">${CORRETORAS.map(c => `<option ${c === cor ? "selected" : ""}>${c}</option>`).join("")}</select></label>
+  <p class="muted" id="iDica" style="font-size:13px;margin:-4px 0 0;line-height:1.5">${esc(DICAS[cor] || "")}</p>
+  <label class="drop" id="iDrop"><svg class="i" style="width:28px;height:28px"><use href="#i-up"/></svg><span style="font-weight:600;color:var(--txt)">Arrasta aqui o extrato ou toca para escolher</span><span class="sub">CSV, Excel, PDF ou imagem · podes escolher vários ficheiros</span>
+  <input type="file" id="iFile" class="hide" multiple accept=".csv,.txt,.tsv,.xlsx,.xls,.pdf,image/png,image/jpeg,image/webp" onchange="lerExtratos(this.files)"></label>
+  <div id="iStat" class="muted" style="font-size:14px"></div>
+  <p class="muted" style="font-size:12px;margin:0;line-height:1.5">A IA lê o ficheiro e mostra-te os movimentos para confirmares antes de importar. Nada é guardado sem confirmares.</p>
+  <div class="acts"><button class="btn" onclick="fecharDlg()">Cancelar</button></div>`);
+  const d = $("#iDrop");
+  ["dragenter", "dragover"].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add("on"); }));
+  ["dragleave", "drop"].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove("on"); }));
+  d.addEventListener("drop", e => lerExtratos(e.dataTransfer.files));
+}
+const b64De = f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = ko; r.readAsDataURL(f); });
+const textoDe = f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = ko; r.readAsText(f); });
+function carregarXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload = ok; sc.onerror = () => ko(new Error("Não consegui abrir o leitor de Excel. Exporta em CSV.")); document.head.appendChild(sc); });
+}
+async function ficheiroParaEnvio(f){
+  const nome = f.name || "extrato", ext = (nome.split(".").pop() || "").toLowerCase();
+  if (f.size > 15 * 1024 * 1024) throw new Error(`${nome}: ficheiro demasiado grande (máximo 15 MB).`);
+  if (["csv","txt","tsv"].includes(ext) || /^text\//.test(f.type)) return {nome, texto:await textoDe(f)};
+  if (["xlsx","xls"].includes(ext)){
+    await carregarXLSX();
+    const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:"array", cellDates:true});
+    return {nome, texto:wb.SheetNames.map(n => `### Folha: ${n}\n` + XLSX.utils.sheet_to_csv(wb.Sheets[n], {dateNF:"yyyy-mm-dd"})).join("\n\n")};
+  }
+  if (ext === "pdf" || f.type === "application/pdf") return {nome, mime:"application/pdf", b64:await b64De(f)};
+  if (/^image\//.test(f.type)) return {nome, mime:f.type, b64:await b64De(f)};
+  throw new Error(`${nome}: formato não suportado.`);
+}
+async function lerExtratos(files){
+  files = [...(files || [])]; if (!files.length) return;
+  const st = $("#iStat"), cor = $("#iCor").value;
+  const todos = []; let meta = {corretora:cor, resumo:[], ignorados:[]};
+  for (let i = 0; i < files.length; i++){
+    st.innerHTML = `<span class="spin" aria-hidden="true"></span> A ler ${esc(files[i].name)}${files.length > 1 ? ` (${i + 1} de ${files.length})` : ""}… pode demorar 1 a 2 minutos.`;
+    try{
+      const r = await api("/api/importar", {ficheiro:await ficheiroParaEnvio(files[i]), corretora:cor}, 300000);
+      todos.push(...(r.itens || []));
+      if (r.resumo) meta.resumo.push(r.resumo); if (r.ignorados) meta.ignorados.push(r.ignorados);
+      if (r.corretora) meta.corretora = r.corretora;
+    }catch(e){ st.innerHTML = `<span class="down">${esc(e.message)}</span>`; if (!todos.length) return; }
+  }
+  if (!todos.length){ st.innerHTML = `<span class="down">Não encontrei compras, vendas nem dividendos neste ficheiro.</span>`; return; }
+  revisao(todos, meta);
+}
+function eDuplicado(x){
+  return vivos("ops").some(o => o.sym === x.sym && o.tipo === x.tipo && o.data === x.data && (x.tipo === "dividendo" ? Math.abs((+o.total || 0) - x.total) < .05 : Math.abs((+o.qtd || 0) - x.qtd) < 1e-6));
+}
+function revisao(itens, meta){
+  impMeta = meta;
+  IMP = itens.sort((a, b) => a.data.localeCompare(b.data)).map((x, i) => Object.assign({}, x, {i, dup:x.sym ? eDuplicado(x) : false}));
+  IMP.forEach(x => x.sel = !x.dup && !!x.sym && x.total > 0 && (x.tipo === "dividendo" || x.qtd > 0));
+  const n = t => IMP.filter(x => x.tipo === t).length;
+  dlg(`<h3>Confirmar importação · ${esc(meta.corretora || "")}</h3>
+  <p class="muted2" style="margin:0;font-size:14px;line-height:1.5">${n("compra")} compras, ${n("venda")} vendas e ${n("dividendo")} dividendos encontrados.${IMP.some(x => x.dup) ? " Os que já existem na app ficam desmarcados." : ""} ${esc(meta.ignorados.join(" "))}</p>
+  <div class="tbl imp" style="max-height:55vh;overflow:auto;border:1px solid var(--line);border-radius:10px"><table><thead><tr><th><input type="checkbox" aria-label="Selecionar todos" onchange="IMP.forEach(x=>x.sel=this.checked);document.querySelectorAll('[data-isel]').forEach(c=>c.checked=this.checked);impConta()" checked></th><th>Data</th><th>Tipo</th><th>Símbolo (Yahoo)</th><th>Ativo</th><th class="r">Qtd.</th><th class="r">Total €</th><th>Nota</th></tr></thead><tbody>
+  ${IMP.map(x => `<tr class="${x.dup ? "dup" : ""}"><td><input type="checkbox" data-isel aria-label="Importar linha" ${x.sel ? "checked" : ""} onchange="IMP[${x.i}].sel=this.checked;impConta()"></td>
+    <td class="mono" style="white-space:nowrap">${dataPT(x.data)}</td>
+    <td><span class="pill ${x.tipo === "venda" ? "down" : x.tipo === "compra" ? "up" : ""}">${x.tipo === "venda" ? "Venda" : x.tipo === "compra" ? "Compra" : "Dividendo"}</span></td>
+    <td><input class="in mono" style="width:110px" value="${esc(x.sym)}" aria-label="Símbolo" onchange="IMP[${x.i}].sym=this.value.trim().toUpperCase()"></td>
+    <td style="min-width:150px"><div style="font-size:13px">${esc(x.nome)}</div>${x.isin ? `<div class="sub">${esc(x.isin)}</div>` : ""}</td>
+    <td class="r mono">${x.tipo === "dividendo" ? "—" : String(+(+x.qtd).toFixed(6)).replace(".", ",")}</td>
+    <td class="r"><input class="in mono" style="width:100px;text-align:right" inputmode="decimal" value="${String(x.total).replace(".", ",")}" aria-label="Total em euros" onchange="IMP[${x.i}].total=num(this.value)||0"></td>
+    <td class="sub" style="min-width:120px">${x.dup ? "Já existe na app. " : ""}${esc(x.aviso || "")}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="acts"><button class="btn" onclick="abrirImport()">Outro ficheiro</button><button class="btn" onclick="fecharDlg()">Cancelar</button><button class="btn pri" id="impOk" onclick="confirmarImport()">Importar</button></div>`, true);
+  impConta();
+}
+function impConta(){ const b = $("#impOk"); if (b){ const n = IMP.filter(x => x.sel).length; b.textContent = `Importar ${n} movimento${n === 1 ? "" : "s"}`; b.disabled = !n; } }
+async function confirmarImport(){
+  const sel = IMP.filter(x => x.sel);
+  const maus = sel.filter(x => !x.sym || !(x.total > 0) || (x.tipo !== "dividendo" && !(x.qtd > 0)));
+  if (maus.length) return toast(`${maus.length} linha(s) sem símbolo ou sem valor. Corrige ou desmarca.`, 4500);
+  const now = Date.now(), novos = [];
+  sel.forEach((x, k) => {
+    S.ops.push({id:uid() + k, criado:now + k, upd:now, sym:x.sym, tipo:x.tipo, data:x.data, qtd:x.tipo === "dividendo" ? 0 : +x.qtd, total:+(+x.total).toFixed(2), imposto:x.imposto || 0, origem:impMeta.corretora || "importado", nota:""});
+    const a = ativo(x.sym);
+    if (!a && !novos.some(n => n.id === x.sym)){
+      const tipoY = x.tipoY || "";
+      const n = {id:x.sym, upd:now, nome:x.nome, isin:x.isin || "", tipoY, setorY:x.setorY || "", industriaY:x.industriaY || "", tipo:tipoY === "ETF" ? "ETF" : tipoY === "CRYPTOCURRENCY" ? "Cripto" : "Ação", setores:tipoY === "CRYPTOCURRENCY" ? {"Cripto":100} : {"Outros":100}, fonte:"pendente"};
+      novos.push(n); S.ativos.push(n);
+    } else if (a && x.isin && !a.isin){ a.isin = x.isin; a.upd = now; }
+  });
+  save(); fecharDlg(); render(); toast(`${sel.length} movimentos importados.`);
+  atualizarPrecos(true);
+  for (const n of novos){
+    try{ const c = await api("/api/classificar", {sym:n.id, nome:n.nome, tipoY:n.tipoY, setorY:n.setorY, industriaY:n.industriaY}); upsert("ativos", Object.assign({}, ativo(n.id), {tipo:c.tipo, setores:c.setores, nota:c.nota || "", fonte:c.fonte})); }
+    catch(e){ toast("Setores de " + n.id + ": " + e.message, 4000); }
+  }
+  renderBg();
+}
+
+/* ---------- DIVIDENDOS ---------- */
+function vDividendos(m){
+  if (!vivos("ops").length) return semDados(m);
+  const ps = posicoes(), t = totais(ps), pg = pagamentos();
+  const comDiv = ps.filter(p => p.qtd > 0 && p.divPrev > 0).sort((a, b) => b.divPrev - a.divPrev);
+  const porEst = pg.filter(x => !x.registado);
+  const yieldAtual = t.valor > 0 ? t.divPrev / t.valor : 0, yieldCusto = t.custo > 0 ? t.divPrev / t.custo : 0;
+  m.innerHTML = `<div class="head"><h1>Dividendos</h1><button class="btn pri" onclick="abrirOp(null, null, 'dividendo')"><svg class="i"><use href="#i-plus"/></svg>Registar dividendo</button></div>
+  <div class="grid4">
+    <div class="card kpi"><span class="lab">Recebido · 12 meses (líquido)</span><span class="v mono">${eur(t.div12)}</span></div>
+    <div class="card kpi"><span class="lab">Recebido desde o início</span><span class="v mono">${eur(t.divRec)}</span></div>
+    <div class="card kpi"><span class="lab">Previsão próximos 12 meses (bruto)</span><span class="v mono">${eur(t.divPrev)}</span><span class="sub">≈ ${eur(t.divPrev / 12)} por mês</span></div>
+    <div class="card kpi"><span class="lab">Rendimento da carteira</span><span class="v mono">${pct(yieldAtual)}</span><span class="sub">sobre o investido: ${pct(yieldCusto)}</span></div>
+  </div>
+  <div class="row">
+    <div class="card f2"><h2>Dividendos por mês · 24 meses</h2>
+      <div class="chartbox" style="height:240px"><canvas id="cDiv" role="img" aria-label="Dividendos recebidos e estimados por mês"></canvas></div>
+      <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--up)"></span>Registados (líquido)</span><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--txt3)"></span>Estimados por registar (bruto)</span></div>
+    </div>
+    <div class="card f1"><h2>Quem paga mais</h2>
+      ${comDiv.length ? `<ul class="legend">${comDiv.map(p => `<li><span><span class="tk">${esc(p.sym)}</span>&nbsp;<span class="sub">${p.valor > 0 ? pct(p.divPrev / p.valor) : ""}</span></span><span class="mono">${eur(p.divPrev, 0)}/ano</span></li>`).join("")}</ul>` : `<p class="muted">Nenhuma posição pagou dividendos nos últimos 12 meses. Os ETFs de acumulação reinvestem os dividendos, por isso não aparecem aqui.</p>`}
+    </div>
+  </div>
+  ${porEst.length ? `<div class="card" style="margin-bottom:14px"><h2>Por confirmar (${porEst.length})</h2><p class="muted" style="font-size:13px;margin:-4px 0 10px;line-height:1.5">Pagamentos detetados no histórico do ativo, com o valor bruto estimado. Regista o valor líquido que entrou na conta, ou importa o extrato da corretora.</p>
+    <div class="tbl"><table><thead><tr><th>Data ex</th><th>Ativo</th><th class="r">Unidades</th><th class="r">Por unidade</th><th class="r">Bruto estimado</th><th></th></tr></thead><tbody>
+    ${porEst.slice(0, 40).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono">${String(+x.qtd.toFixed(6)).replace(".", ",")}</td><td class="r mono">${fmtPreco(x.porUnidade, x.moeda)}</td><td class="r mono">${eur(x.bruto)}</td><td class="r"><button class="btn sm" onclick='abrirOp(null, ${esc(JSON.stringify({sym:x.sym, nome:(ativo(x.sym) || {}).nome || x.sym, data:x.data}))}, "dividendo")'>Registar</button></td></tr>`).join("")}
+    </tbody></table></div></div>` : ""}
+  <div class="card"><h2>Registados</h2>
+    ${pg.filter(x => x.registado).length ? `<div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th class="r">Líquido</th><th class="r">Imposto retido</th><th></th></tr></thead><tbody>
+    ${pg.filter(x => x.registado).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono up">${eur(x.liquido)}</td><td class="r mono muted2">${x.imposto ? eur(x.imposto) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${x.id}')">Editar</button></td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="muted">Ainda não registaste dividendos.</p>`}
+  </div>
+  <p class="muted" style="font-size:12.5px;margin-top:14px;line-height:1.5">A previsão usa os dividendos pagos nos últimos 12 meses multiplicados pelas unidades que tens hoje, antes de impostos. Em Portugal os dividendos pagam normalmente 28% de IRS, além do imposto retido no país de origem.</p>`;
+  const meses = []; const d0 = new Date(); d0.setDate(1);
+  for (let i = 23; i >= 0; i--){ const d = new Date(d0.getFullYear(), d0.getMonth() - i, 1); meses.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")); }
+  const reg = meses.map(mm => pg.filter(x => x.registado && x.data.slice(0, 7) === mm).reduce((s, x) => s + x.liquido, 0));
+  const es = meses.map(mm => pg.filter(x => !x.registado && x.data.slice(0, 7) === mm).reduce((s, x) => s + x.bruto, 0));
+  const MS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  const op = baseOpts();
+  op.scales.x.stacked = true; op.scales.y.stacked = true; op.scales.y.ticks.callback = v => NF0.format(v) + " €";
+  op.plugins.tooltip.callbacks = {label:c => ` ${c.dataset.label}: ${eur(c.parsed.y)}`};
+  mkChart("cDiv", {type:"bar", data:{labels:meses.map(mm => MS[+mm.slice(5) - 1] + " " + mm.slice(2, 4)), datasets:[
+    {label:"Registados", data:reg.map(v => +v.toFixed(2)), backgroundColor:cssv("--up"), borderRadius:3},
+    {label:"Estimados", data:es.map(v => +v.toFixed(2)), backgroundColor:cssv("--txt3") + "88", borderRadius:3}
+  ]}, options:op});
+}
 
 /* ---------- EXPOSIÇÃO ---------- */
 function vExposicao(m){
@@ -792,6 +1004,17 @@ async function carregarAnalise(sym){
     {type:"line", label:"Sinal", data:sl(I.series.sig), borderColor:"#F2A65A", borderWidth:1.4, pointRadius:0}
   ]}, options:baseOpts({scales:{x:{display:false}, y:{grid:{display:false}, ticks:{display:false}, border:{display:false}}}})});
 }
+function justetfBloco(j){
+  if (!j || typeof j !== "object") return "";
+  const v = x => x && x !== "n/d" ? esc(x) : '<span class="muted">n/d</span>';
+  const r = j.rentabilidade || {};
+  const linhas = [["ISIN", j.isin], ["Índice", j.indice], ["Custo anual (TER)", j.ter], ["Tamanho do fundo", j.tamanho], ["Replicação", j.replicacao], ["Dividendos", j.distribuicao], ["Domicílio", j.domicilio], ["Lançamento", j.dataLancamento], ["Posições", j.nPosicoes], ["Volatilidade 1 ano", j.volatilidade1a]];
+  const url = /^https:\/\/(www\.)?justetf\.com\//.test(j.url || "") ? j.url : (j.isin && /^[A-Z]{2}[A-Z0-9]{10}$/.test(j.isin) ? "https://www.justetf.com/pt/etf-profile.html?isin=" + j.isin : "");
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px"><h2 style="margin:0">justETF</h2>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-size:14px">Abrir no justETF ↗</a>` : ""}</div>
+    <div class="metrics">${linhas.filter(x => x[1]).map(x => `<div><span class="n">${x[0]}</span><span class="v" style="font-size:15px">${v(x[1])}</span></div>`).join("")}
+    ${["1a", "3a", "5a"].map(k => r[k] ? `<div><span class="n">Rentabilidade ${k.replace("a", " ano" + (k === "1a" ? "" : "s"))}</span><span class="v mono ${/^-|^−/.test(String(r[k])) ? "down" : "up"}">${v(r[k])}</span></div>` : "").join("")}</div>
+    ${j.nota ? `<p class="muted2" style="font-size:13.5px;line-height:1.5;margin:12px 0 0">${esc(j.nota)}</p>` : ""}</div>`;
+}
 function sinalPill(s, rot){ return `<span class="pill ${s === "positivo" ? "up" : s === "negativo" ? "down" : ""}">${rot}: ${esc(s || "neutro")}</span>`; }
 function iaBloco(sym, ia){
   if (!ia) return `<div class="card" style="border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>ANÁLISE COM IA</div>
@@ -801,6 +1024,7 @@ function iaBloco(sym, ia){
   return `<div class="card" style="border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>ANÁLISE COM IA · ${new Date(ia.quando).toLocaleDateString("pt-PT")}</div>
     <p style="line-height:1.55;margin:10px 0;font-size:15px">${esc(ia.resumo)}</p>
     <div class="chips">${sinalPill(ia.sinalTecnico, "Técnica")}${sinalPill(ia.sinalFundamental, "Fundamental")}</div></div>
+  ${justetfBloco(ia.justetf)}
   ${ia.metricas && ia.metricas.length ? `<div class="card"><h2>Fundamentais</h2><div class="metrics">${ia.metricas.map(x => `<div><span class="n">${esc(x.nome)}</span><span class="v mono">${esc(x.valor)}</span><span class="sub">${esc(x.nota || "")}</span></div>`).join("")}</div></div>` : ""}
   <div class="card prose"><h2>Leitura fundamental</h2><p>${esc(ia.fundamental)}</p>${ia.consenso ? `<p><strong>Consenso:</strong> ${esc(ia.consenso)}</p>` : ""}
   <h2 style="margin-top:14px">Leitura técnica</h2><p>${esc(ia.tecnica)}</p>
@@ -814,7 +1038,7 @@ async function pedirAnalise(sym, forcar){
   const b = $("#iaBtn"); if (b){ b.disabled = true; b.innerHTML = `<span class="spin" aria-hidden="true"></span> A analisar…`; }
   const d = analiseDados[sym] || {}, pos = posicoes().find(x => x.sym === sym && x.qtd > 0), a = ativo(sym) || {};
   try{
-    const r = await api("/api/analisar", {sym, nome:(d.p || {}).nome || a.nome, tipo:a.tipo || (d.p || {}).tipoY, moeda:(d.p || {}).moeda, ind:d.ind, posicao:pos ? {investido:Math.round(pos.custo), valor:Math.round(pos.valor), rendimento:+(pos.rend * 100).toFixed(1)} : {}, forcar:!!forcar}, 150000);
+    const r = await api("/api/analisar", {sym, nome:(d.p || {}).nome || a.nome, tipo:a.tipo || (d.p || {}).tipoY, tipoY:(d.p || {}).tipoY || a.tipoY || "", isin:a.isin || "", moeda:(d.p || {}).moeda, ind:d.ind, posicao:pos ? {investido:Math.round(pos.custo), valor:Math.round(pos.valor), rendimento:+(pos.rend * 100).toFixed(1)} : {}, forcar:!!forcar}, 150000);
     upsert("analises", Object.assign({id:sym}, r));
     const box = document.getElementById("iaBox"); if (box) box.innerHTML = iaBloco(sym, vivos("analises").find(x => x.id === sym));
   }catch(e){ toast(e.message, 6000); if (b){ b.disabled = false; b.innerHTML = "Tentar outra vez"; } }
@@ -839,6 +1063,7 @@ function vSugestoes(m){
     <div class="t"><div><div style="font-size:16px;font-weight:600">${esc(x.titulo)}</div><div class="sub">${esc(x.sym)} · ${esc(x.nome)}</div></div><span class="pill" style="border-left:3px solid ${COR_TIPO[x.tipo] || "#6B7785"}">${esc(x.tipo)}</span></div>
     <p style="margin:0;font-size:14px;line-height:1.5" class="muted2">${esc(x.porque)}</p>
     ${x.efeito ? `<p style="margin:0;font-size:13px"><strong>Na carteira:</strong> ${esc(x.efeito)}</p>` : ""}
+    ${x.tipo === "ETF" && (x.isin || x.ter) ? `<p style="margin:0;font-size:13px"><strong>justETF:</strong> ${x.isin ? "ISIN " + esc(x.isin) : ""}${x.ter ? " · TER " + esc(x.ter) : ""}${/^https:\/\/(www\.)?justetf\.com\//.test(x.justetf || "") || /^[A-Z]{2}[A-Z0-9]{10}$/.test(x.isin || "") ? ` · <a href="${esc(/^https:\/\/(www\.)?justetf\.com\//.test(x.justetf || "") ? x.justetf : "https://www.justetf.com/pt/etf-profile.html?isin=" + x.isin)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</p>` : ""}
     ${x.tecnica ? `<p style="margin:0;font-size:13px"><strong>Técnica:</strong> ${esc(x.tecnica)}</p>` : ""}
     ${x.fundamental ? `<p style="margin:0;font-size:13px"><strong>Fundamental:</strong> ${esc(x.fundamental)}</p>` : ""}
     <div class="conf"><span>Confiança</span><span class="track"><span style="width:${Math.max(0, Math.min(100, +x.confianca || 0))}%"></span></span><span class="mono">${Math.round(+x.confianca || 0)}%</span><span class="pill ${x.risco === "alto" ? "down" : x.risco === "baixo" ? "up" : ""}">risco ${esc(x.risco || "médio")}</span></div>
@@ -848,7 +1073,7 @@ function vSugestoes(m){
   <p class="muted" style="font-size:12.5px;margin-top:16px;line-height:1.5">Sugestões geradas automaticamente a partir de análises públicas e da composição da tua carteira. Não são aconselhamento financeiro nem garantia de rentabilidade — a decisão é sempre tua.</p>`;
 }
 function setCfg(k, v, silencioso){ S.cfg = Object.assign({}, S.cfg, {[k]:v}); touch(S.cfg); save(); if (!silencioso) render(); }
-function addIdeia(i){ const x = (S.sugestoes.ideias || [])[i]; if (x) abrirOp(null, {sym:x.sym, nome:x.nome, tipoY:x.tipo === "ETF" ? "ETF" : x.tipo === "Cripto" ? "CRYPTOCURRENCY" : "EQUITY"}); }
+function addIdeia(i){ const x = (S.sugestoes.ideias || [])[i]; if (!x) return; if (x.isin && !ativo(x.sym)) upsert("ativos", {id:x.sym, nome:x.nome, isin:x.isin, tipo:x.tipo, tipoY:x.tipo === "ETF" ? "ETF" : "", setores:{"Outros":100}, fonte:"pendente"}); abrirOp(null, {sym:x.sym, nome:x.nome, tipoY:x.tipo === "ETF" ? "ETF" : x.tipo === "Cripto" ? "CRYPTOCURRENCY" : "EQUITY"}); }
 async function pedirSugestoes(){
   const ps = posicoes(), t = totais(ps), ex = exposicao(ps);
   const b = $("#sgBtn"); b.disabled = true; b.innerHTML = `<span class="spin" aria-hidden="true"></span> A pensar… (cerca de 1 minuto)`;
