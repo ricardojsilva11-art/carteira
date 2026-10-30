@@ -308,7 +308,8 @@ function posicoes(){
     if (o.tipo === "dividendo"){ p.divRec += t; p.ops.push(o); return; }
     if (o.tipo === "venda"){
       const medio = p.qtd > 0 ? p.custo / p.qtd : 0, qv = Math.min(q, p.qtd);
-      p.custo -= medio * qv; p.realizado += t - medio * qv; p.qtd -= qv;
+      if (q - qv > 1e-6) (p.semCompra = p.semCompra || []).push({data:o.data, qtd:+(q - qv).toFixed(6)});
+      p.custo -= medio * qv; p.realizado += (q > 0 ? t * qv / q : 0) - medio * qv; p.qtd -= qv;
       if (p.qtd < 1e-9){ p.qtd = 0; p.custo = 0; }
     } else { p.qtd += q; p.custo += t; }
     p.ops.push(o);
@@ -320,7 +321,7 @@ function posicoes(){
     const varDia = pr.preco && pr.anterior ? p.qtd * (pr.preco - pr.anterior) * escalaMoeda(pr.moeda) * fxAgora(pr.moeda) : 0;
     const dps12 = dps12m(p.sym), escFx = escalaMoeda(pr.moeda) * fxAgora(pr.moeda);
     const divPrev = p.qtd * dps12 * escFx;
-    return Object.assign(p, {divPrev:isFinite(divPrev) ? divPrev : 0, nome:a.nome || pr.nome || p.sym, tipo:a.tipo || "Ação", setores:a.setores || {"Outros":100}, moeda:pr.moeda || a.moeda || "", precoLocal:pr.preco, valor, ganho:valor - p.custo, rend:p.custo > 0 ? (valor - p.custo) / p.custo : 0, varDia, varDiaPct:pr.anterior ? pr.preco / pr.anterior - 1 : 0, temPreco:isFinite(valor)});
+    return Object.assign(p, {sessao:pr.sessao || "", divPrev:isFinite(divPrev) ? divPrev : 0, nome:a.nome || pr.nome || p.sym, tipo:a.tipo || "Ação", setores:a.setores || {"Outros":100}, moeda:pr.moeda || a.moeda || "", precoLocal:pr.preco, valor, ganho:valor - p.custo, rend:p.custo > 0 ? (valor - p.custo) / p.custo : 0, varDia, varDiaPct:pr.anterior ? pr.preco / pr.anterior - 1 : 0, temPreco:isFinite(valor)});
   });
 }
 function totais(ps){
@@ -530,8 +531,8 @@ function vPainel(m){
   const ps = posicoes(), t = totais(ps);
   if (!vivos("ops").length) return semDados(m);
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco).sort((a, b) => b.rend - a.rend);
-  const ex = exposicao(ps), al = alertas(ex);
-  m.innerHTML = `
+  const ex = exposicao(ps), al = alertas(ex), nDup = duplicadosProvaveis().length;
+  m.innerHTML = `${nDup ? `<a class="warn" href="#posicoes" style="display:block;margin:0 0 14px;text-decoration:none">${nDup === 1 ? "Há uma compra que parece repetida" : `Há ${nDup} compras que parecem repetidas`} — o valor da carteira pode estar a mais. Ver em Posições →</a>` : ""}
   <div class="head">
     <div style="display:flex;flex-direction:column;gap:6px">
       <span class="muted" style="font-size:14px">Valor da carteira</span>
@@ -618,7 +619,7 @@ function tabelaPos(lista, curta){
   return `<div class="tbl"><table><thead><tr><th>Ativo</th>${curta ? "" : '<th>Tipo</th><th class="r">Qtd.</th><th class="r">Preço</th>'}<th class="r">Investido</th><th class="r">Valor</th><th class="r">Hoje</th><th class="r">Resultado</th></tr></thead><tbody>
   ${lista.map(p => `<tr class="click" tabindex="0" onclick="verAtivo('${esc(p.sym)}')" onkeydown="if(event.key==='Enter')verAtivo('${esc(p.sym)}')">
     <td><div style="display:flex;flex-direction:column;gap:2px;min-width:110px"><span class="tk">${esc(p.sym)}</span><span class="sub">${esc(p.nome)}</span></div></td>
-    ${curta ? "" : `<td><span class="pill" style="border-left:3px solid ${COR_TIPO[p.tipo] || "#6B7785"}">${esc(p.tipo)}</span></td><td class="r mono">${nf(p.qtd < 10 ? 4 : 2).format(p.qtd).replace(/,?0+$/, "")}</td><td class="r mono">${fmtPreco(p.precoLocal, p.moeda)}</td>`}
+    ${curta ? "" : `<td><span class="pill" style="border-left:3px solid ${COR_TIPO[p.tipo] || "#6B7785"}">${esc(p.tipo)}</span></td><td class="r mono">${nf(p.qtd < 10 ? 4 : 2).format(p.qtd).replace(/,?0+$/, "")}</td><td class="r mono">${fmtPreco(p.precoLocal, p.moeda)}${p.sessao ? `<div class="sub">${esc(p.sessao)}</div>` : ""}</td>`}
     <td class="r mono muted2">${eur(p.custo, 0)}</td>
     <td class="r mono">${p.temPreco ? eur(p.valor, 0) : '<span class="muted">sem preço</span>'}</td>
     <td class="r mono ${tone(p.varDiaPct)}">${p.temPreco ? pctS(p.varDiaPct) : ""}</td>
@@ -633,12 +634,30 @@ function vPosicoes(m){
   const abertas = ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor), fechadas = ps.filter(p => p.qtd <= 0);
   const ops = vivos("ops").slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
   m.innerHTML = `<div class="head"><h1>Posições</h1><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato</button><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div></div>
+  ${avisosDados(ps)}
   <div class="card" style="margin-bottom:14px">${tabelaPos(abertas, false)}
   <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca numa posição para ver o detalhe, editar setores ou analisar.</p></div>
   ${fechadas.length ? `<div class="card" style="margin-bottom:14px"><h2>Posições fechadas</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Resultado realizado</th></tr></thead><tbody>${fechadas.map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></td><td class="r mono ${tone(p.realizado)}">${eurS(p.realizado)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
   <div class="card"><h2>Movimentos</h2><div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th>Operação</th><th class="r">Quantidade</th><th class="r">Total (€)</th><th class="r">Preço médio</th><th></th></tr></thead><tbody>
   ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym)}</td><td><span class="pill ${o.tipo === "venda" ? "down" : o.tipo === "dividendo" ? "" : "up"}">${o.tipo === "venda" ? "Venda" : o.tipo === "dividendo" ? "Dividendo" : "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${o.tipo === "dividendo" ? "—" : esc(String(o.qtd).replace(".", ","))}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${o.tipo !== "dividendo" && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
   </tbody></table></div></div>`;
+}
+/* compras repetidas (à mão + importada) e vendas sem compra registada */
+function duplicadosProvaveis(){
+  const cs = vivos("ops").filter(o => o.tipo === "compra"), out = [];
+  cs.forEach((a, i) => cs.slice(i + 1).forEach(b => {
+    if (a.sym !== b.sym || !!a.origem === !!b.origem) return;
+    if (Math.abs((+a.qtd || 0) - (+b.qtd || 0)) <= Math.max(1e-6, (+a.qtd || 0) * .005)) out.push(a.origem ? b : a);
+  }));
+  return out;
+}
+function avisosDados(ps){
+  const dup = duplicadosProvaveis(), sem = ps.filter(p => p.semCompra);
+  if (!dup.length && !sem.length) return "";
+  return `<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><h2>A rever</h2>
+  ${dup.map(o => `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span><strong>${esc(o.sym)}:</strong> a compra de ${String(o.qtd).replace(".", ",")} unidades de ${dataPT(o.data)} (adicionada à mão) parece repetir uma compra importada do extrato. Se for a mesma, apaga-a.</span><button class="btn sm" onclick="abrirOp('${o.id}')">Ver e apagar</button></div>`).join("")}
+  ${sem.map(p => `<div class="warn"><strong>${esc(p.sym)}:</strong> ${p.semCompra.map(x => `venda de ${String(x.qtd).replace(".", ",")} unidades em ${dataPT(x.data)}`).join(", ")} sem compra registada antes. Falta o extrato com essa compra; até lá, o ganho dessa venda não entra nas contas.</div>`).join("")}
+  </div>`;
 }
 function verAtivo(sym){
   const p = posicoes().find(x => x.sym === sym); if (!p) return;
@@ -961,7 +980,7 @@ async function carregarAnalise(sym){
   <div class="head">
     <div style="display:flex;flex-direction:column;gap:6px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1>${esc(p.nome)}</h1><span class="pill">${esc(sym)} · ${esc(p.bolsa)}</span>${a.tipo ? `<span class="pill">${esc(a.tipo)}</span>` : ""}</div>
-      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="mono" style="font-size:30px;font-weight:600">${fmtPreco(p.preco, p.moeda)}</span><span class="mono ${tone(varDia)}">${pctS(varDia)} hoje</span>
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="mono" style="font-size:30px;font-weight:600">${fmtPreco(p.preco, p.moeda)}</span><span class="mono ${tone(varDia)}">${pctS(varDia)} ${p.sessao ? esc(p.sessao) : "hoje"}</span>
       ${pos ? `<span class="muted" style="font-size:14px">A tua posição: ${eur(pos.valor)} · <span class="mono ${tone(pos.rend)}">${pctS(pos.rend)}</span></span>` : ""}</div>
     </div>
     ${pos ? "" : `<button class="btn" onclick='abrirOp(null, ${JSON.stringify({sym, nome:p.nome, tipoY:p.tipoY}).replace(/'/g, "&#39;")})'><svg class="i"><use href="#i-plus"/></svg>Adicionar à carteira</button>`}

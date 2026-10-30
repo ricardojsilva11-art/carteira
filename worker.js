@@ -71,7 +71,7 @@ async function yahoo(path){
 }
 const symOk = s => /^[A-Za-z0-9.\-=^]{1,24}$/.test(s);
 async function chart(env, sym, range, ctx){
-  const ck = `ch2:${sym}:${range}`, maxAge = range === "5d" ? 3 * 60e3 : 10 * 60e3;
+  const ck = `ch3:${sym}:${range}`, maxAge = range === "5d" ? 3 * 60e3 : 10 * 60e3;
   if (ctx && ctx.pre){ const r = ctx.pre.get(ck); if (r && Date.now() - r.t < maxAge) return JSON.parse(r.v); }
   else { const hit = await cacheGet(env, ck, maxAge); if (hit) return hit; }
   const j = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=1d&includePrePost=false&events=div%2Csplit`);
@@ -85,12 +85,33 @@ async function chart(env, sym, range, ctx){
   /* um dia pode aparecer duas vezes (barra do dia em curso): fica a última */
   const byDay = new Map(); hist.forEach(h => byDay.set(h[0], h));
   const h2 = [...byDay.values()];
-  const price = +(m.regularMarketPrice != null ? m.regularMarketPrice : (h2.length ? h2[h2.length - 1][1] : 0));
+  let price = +(m.regularMarketPrice != null ? m.regularMarketPrice : (h2.length ? h2[h2.length - 1][1] : 0));
   const today = m.regularMarketTime ? dayOf(m.regularMarketTime) : (h2.length ? h2[h2.length - 1][0] : "");
   const prevBar = [...h2].reverse().find(h => h[0] < today);
+  /* preço de agora: o histórico diário às vezes falha dias (ETFs em Londres) e não tem pré-abertura/após-fecho */
+  let anterior = prevBar ? prevBar[1] : (m.chartPreviousClose || price), sessao = "", hora = m.regularMarketTime || 0;
+  if (!/=X$/.test(sym)){
+    try{
+      const jl = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=5m&includePrePost=true`);
+      const rl = jl && jl.chart && jl.chart.result && jl.chart.result[0];
+      if (rl){
+        const ml = rl.meta || {}, tl = rl.timestamp || [], cl = (((rl.indicators || {}).quote || [{}])[0] || {}).close || [];
+        if (ml.regularMarketPrice != null) price = +ml.regularMarketPrice;
+        if (ml.chartPreviousClose != null) anterior = +ml.chartPreviousClose;
+        if (ml.regularMarketTime) hora = ml.regularMarketTime;
+        let lt = null, lp = null;
+        for (let i = tl.length - 1; i >= 0; i--) if (cl[i] != null && isFinite(cl[i])){ lt = tl[i]; lp = +cl[i]; break; }
+        const reg = (ml.currentTradingPeriod || {}).regular || {};
+        if (lt && ml.regularMarketTime && lt > ml.regularMarketTime + 120 && lp > 0){
+          price = lp; hora = lt;
+          sessao = reg.start && lt < reg.start ? "pré-abertura" : "após fecho";
+        }
+      }
+    }catch(e){ /* fica o preço do histórico diário */ }
+  }
   const divs = Object.values(((r.events || {}).dividends) || {}).filter(d => d && d.amount > 0 && d.date).map(d => [dayOf(d.date), +(+d.amount).toFixed(6)]).sort((a, b) => a[0].localeCompare(b[0]));
   const out = {divs, sym:m.symbol || sym, nome:m.longName || m.shortName || sym, moeda:m.currency || "", tipoY:m.instrumentType || "", bolsa:m.fullExchangeName || m.exchangeName || "",
-    preco:price, anterior:prevBar ? prevBar[1] : (m.chartPreviousClose || price), dia:today, max52:m.fiftyTwoWeekHigh || null, min52:m.fiftyTwoWeekLow || null, hist:h2};
+    preco:price, anterior, sessao, hora, dia:today, max52:m.fiftyTwoWeekHigh || null, min52:m.fiftyTwoWeekLow || null, hist:h2};
   if (ctx && ctx.writes) ctx.writes.push([ck, JSON.stringify(out)]);
   else await cachePut(env, ck, out);
   return out;
@@ -102,8 +123,8 @@ async function precos(env, body){
   const out = {}, erros = {};
   /* uma só leitura da cache para todos os ativos e câmbios (limite de consultas por pedido) */
   await ensure(env);
-  const moedasProv = ["USD","GBP","CHF","JPY","CAD","AUD","DKK","SEK","NOK","HKD"].map(c => `ch2:${c}EUR=X:${range}`);
-  const keys = syms.map(s => `ch2:${s}:${range}`).concat(moedasProv);
+  const moedasProv = ["USD","GBP","CHF","JPY","CAD","AUD","DKK","SEK","NOK","HKD"].map(c => `ch3:${c}EUR=X:${range}`);
+  const keys = syms.map(s => `ch3:${s}:${range}`).concat(moedasProv);
   const pre = new Map();
   for (let i = 0; i < keys.length; i += 90){
     const part = keys.slice(i, i + 90);
