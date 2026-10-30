@@ -764,12 +764,12 @@ function fecharDlg(){ const d = $("#dlg"); if (d.open) d.close(); }
 $("#dlg").addEventListener("click", e => { if (e.target.id === "dlg") fecharDlg(); });
 
 /* ---------- IMPORTAR EXTRATO ---------- */
-const CORRETORAS = ["Degiro","Trading 212","XTB","Interactive Brokers","Revolut","Trade Republic","Lightyear","Banco / outra"];
-const DICAS = {"Degiro":"Caixa de entrada › Transações e Conta › Exportar CSV (envia os dois: o de Transações traz as compras e vendas, o de Conta traz os dividendos).", "Trading 212":"Histórico › Exportar (CSV), com compras, vendas e dividendos.", "XTB":"No xStation 5 (no computador ou em xstation5.xtb.com): separador Histórico, escolhe as datas desde a abertura da conta e exporta para Excel (.xlsx). Envia o ficheiro inteiro: a app usa só as operações de caixa, por isso não duplica nada. Os extratos mensais em PDF também servem.", "Interactive Brokers":"Relatórios › Extratos › Atividade › CSV.", "Revolut":"Investimentos › … › Documentos › Extrato da conta (CSV ou PDF).", "Trade Republic":"Perfil › Atividade › extratos em PDF (podes enviar vários).", "Lightyear":"Conta › Extratos › CSV.", "Banco / outra":"Qualquer extrato em CSV, Excel, PDF ou foto legível."};
+const CORRETORAS = ["XTB","Degiro","Trading 212","Interactive Brokers","Revolut","Trade Republic","Lightyear","Banco","Outra"];
+const DICAS = {"Banco":"Extrato de operações sobre títulos ou extrato da carteira de títulos, em PDF. Se o PDF tiver palavra-passe, abre-o e usa Imprimir › Guardar como PDF antes de o enviar. Também podes enviar fotografias das páginas.", "Degiro":"Caixa de entrada › Transações e Conta › Exportar CSV (envia os dois: o de Transações traz as compras e vendas, o de Conta traz os dividendos).", "Trading 212":"Histórico › Exportar (CSV), com compras, vendas e dividendos.", "XTB":"No xStation 5 (no computador ou em xstation5.xtb.com): separador Histórico, escolhe as datas desde a abertura da conta e exporta para Excel (.xlsx). Envia o ficheiro inteiro: a app usa só as operações de caixa, por isso não duplica nada. Os extratos mensais em PDF também servem.", "Interactive Brokers":"Relatórios › Extratos › Atividade › CSV.", "Revolut":"Investimentos › … › Documentos › Extrato da conta (CSV ou PDF).", "Trade Republic":"Perfil › Atividade › extratos em PDF (podes enviar vários).", "Lightyear":"Conta › Extratos › CSV.", "Outra":"Qualquer extrato em CSV, Excel, PDF ou foto legível."};
 let IMP = [], impMeta = {};
 function abrirImport(){
   if (!L.code) return toast("Liga primeiro o servidor nas Definições.");
-  const cor = store.get("cart.corretora", "Degiro");
+  let cor = store.get("cart.corretora", "XTB"); if (!CORRETORAS.includes(cor)) cor = "Banco";
   dlg(`<h3>Importar extrato da corretora</h3>
   <label class="f">Corretora<select class="in" id="iCor" onchange="store.set('cart.corretora', this.value); $('#iDica').textContent = DICAS[this.value] || ''">${CORRETORAS.map(c => `<option ${c === cor ? "selected" : ""}>${c}</option>`).join("")}</select></label>
   <p class="muted" id="iDica" style="font-size:13px;margin:-4px 0 0;line-height:1.5">${esc(DICAS[cor] || "")}</p>
@@ -800,7 +800,14 @@ async function ficheiroParaEnvio(f){
     const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:"array", cellDates:true});
     return {nome, texto:limparTexto(wb.SheetNames.map(n => `### Folha: ${n}\n` + XLSX.utils.sheet_to_csv(wb.Sheets[n], {dateNF:"yyyy-mm-dd"})).join("\n\n"))};
   }
-  if (ext === "pdf" || f.type === "application/pdf") return {nome, mime:"application/pdf", b64:await b64De(f)};
+  if (ext === "pdf" || f.type === "application/pdf"){
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const cab = new TextDecoder("latin1").decode(bytes.slice(0, 5)), txt = new TextDecoder("latin1").decode(bytes.slice(-Math.min(bytes.length, 4000000)));
+    if (cab !== "%PDF-") throw new Error(`${nome}: não parece ser um PDF válido.`);
+    if (/\/Encrypt\s/.test(txt)) throw new Error(`${nome}: o PDF está protegido com palavra-passe. Abre-o (com a palavra-passe do banco), escolhe Imprimir › Guardar como PDF e envia esse ficheiro novo.`);
+    if (f.size > 20 * 1024 * 1024) throw new Error(`${nome}: PDF demasiado grande (máximo 20 MB). Guarda só as páginas com os títulos.`);
+    return {nome, mime:"application/pdf", b64:await b64De(f)};
+  }
   if (/^image\//.test(f.type)) return {nome, mime:f.type, b64:await b64De(f)};
   throw new Error(`${nome}: formato não suportado.`);
 }

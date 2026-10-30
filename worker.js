@@ -179,7 +179,14 @@ async function claude(env, system, prompt, {maxTokens = 4000, searches = 0, fetc
       body:JSON.stringify(Object.assign({model:env.MODEL || "claude-sonnet-5-5", max_tokens:maxTokens, system, messages}, tools ? {tools} : {}))
     });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw err("A IA respondeu com erro: " + ((j.error && j.error.message) || r.status), 502);
+    if (!r.ok){
+      const msg = (j.error && j.error.message) || String(r.status);
+      if (/pdf/i.test(msg) && /(password|encrypt|protect)/i.test(msg)) throw err("O PDF está protegido com palavra-passe. Abre-o, escolhe Imprimir › Guardar como PDF e envia esse ficheiro novo.", 400);
+      if (/pdf/i.test(msg) && /(page|pages)/i.test(msg)) throw err("O PDF tem demasiadas páginas. Envia só as páginas com os títulos/ações (máximo 100).", 400);
+      if (/pdf|document/i.test(msg)) throw err("A IA não conseguiu ler este PDF (" + msg.slice(0, 120) + "). Experimenta Imprimir › Guardar como PDF, ou uma fotografia das páginas.", 400);
+      if (/too large|exceeds|maximum/i.test(msg)) throw err("O ficheiro é demasiado grande para a IA. Envia só as páginas necessárias.", 400);
+      throw err("A IA respondeu com erro: " + msg, 502);
+    }
     (j.content || []).forEach(c => {
       if (c.type === "web_search_tool_result" && Array.isArray(c.content)) c.content.forEach(x => x && x.url && !fontes.has(x.url) && fontes.set(x.url, {titulo:x.title || x.url, url:x.url}));
       if (c.type === "web_fetch_tool_result" && c.content && c.content.url) fontes.set(c.content.url, {titulo:(c.content.content && c.content.content.title) || c.content.url, url:c.content.url, lida:true});
@@ -327,8 +334,9 @@ async function importar(env, key, body){
   const system = `Lês extratos e relatórios de corretoras (Degiro, Trading 212, XTB, Interactive Brokers, Revolut, Lightyear, Trade Republic, bancos portugueses, etc.) e devolves os movimentos de investimento para uma app de carteira em português de Portugal.
 Responde APENAS com JSON:
 {"corretora":"nome","resumo":"1 frase","ignorados":"1 frase sobre o que ignoraste (depósitos, levantamentos, câmbios, juros...)",
- "itens":[{"tipo":"compra|venda|dividendo","data":"AAAA-MM-DD","nome":"nome do ativo","isin":"ISIN ou vazio","ticker":"ticker ou vazio","bolsa":"bolsa/mercado se aparecer","qtd":número de unidades (0 nos dividendos),"preco":preço unitário na moeda do ativo,"moeda":"moeda do ativo (EUR, USD, GBP, GBX...)","valor":montante bruto na moeda do ativo (qtd×preço; nos dividendos o bruto),"totalEUR":valor em euros tal como aparece no extrato (compras: total pago COM comissões e taxas; vendas: total recebido JÁ SEM comissões; dividendos: valor líquido recebido depois de impostos) ou null se o extrato não tiver o valor em euros,"comissaoEUR":número ou 0,"impostoEUR":imposto retido nos dividendos em euros ou 0,"brutoEUR":dividendo bruto em euros ou null}]}
+ "itens":[{"tipo":"compra|venda|dividendo","data":"AAAA-MM-DD","nome":"nome do ativo","isin":"ISIN ou vazio","ticker":"ticker ou vazio","bolsa":"bolsa/mercado se aparecer","qtd":número de unidades (0 nos dividendos),"preco":preço unitário na moeda do ativo,"moeda":"moeda do ativo (EUR, USD, GBP, GBX...)","valor":montante bruto na moeda do ativo (qtd×preço; nos dividendos o bruto),"totalEUR":valor em euros tal como aparece no extrato (compras: total pago COM comissões e taxas; vendas: total recebido JÁ SEM comissões; dividendos: valor líquido recebido depois de impostos) ou null se o extrato não tiver o valor em euros,"comissaoEUR":número ou 0,"impostoEUR":imposto retido nos dividendos em euros ou 0,"brutoEUR":dividendo bruto em euros ou null,"posicao":false,"custoDesconhecido":false}]}
 ${REGRAS_CORRETORA[String(body.corretora || "").toLowerCase()] || ""}
+Extrato de posição / carteira de títulos (lista de ativos detidos com quantidade e valor, sem compras nem vendas — comum nos bancos): devolve um item "compra" por ativo com "posicao":true, data = data de aquisição se aparecer, senão a data do extrato; qtd = quantidade detida; totalEUR = custo de aquisição total (preço médio de compra × quantidade) se aparecer, senão o valor de mercado em euros indicado no extrato, e nesse caso "custoDesconhecido":true. Se o documento tiver operações E posição, usa só as operações.
 Regras: um item por operação executada (junta execuções parciais da mesma ordem no mesmo dia); nas linhas de dividendo junta o dividendo e o imposto retido do mesmo ativo e data num só item; ignora depósitos, levantamentos, conversões de moeda, juros, transferências e ordens canceladas; números com ponto decimal e sempre positivos; não inventes valores; se uma data não tiver ano, usa o mais provável.`;
   const {out} = await claude(env, system, content, {maxTokens:32000});
   let itens = (Array.isArray(out.itens) ? out.itens : []).filter(x => x && ["compra","venda","dividendo"].includes(x.tipo) && /^\d{4}-\d{2}-\d{2}$/.test(String(x.data || ""))).slice(0, 1500);
@@ -382,6 +390,7 @@ Regras: um item por operação executada (junta execuções parciais da mesma or
         aviso = `Convertido de ${x.moeda} ao câmbio de ${x.data}.`;
       } else aviso = "Sem valor em euros: confirma o total.";
     }
+    if (x.posicao) aviso = (aviso ? aviso + " " : "") + (x.custoDesconhecido ? "Posição do extrato: o banco não indica o custo de compra; usei o valor de mercado — corrige o total se souberes quanto pagaste." : "Posição do extrato (custo de compra indicado pelo banco).");
     if (!r) aviso = (aviso ? aviso + " " : "") + "Símbolo não encontrado: escolhe-o à mão.";
     final.push({tipo:x.tipo, data:x.data, nome:x.nome || (r && r.nomeY) || k, isin:x.isin || "", ticker:x.ticker || "", sym:r ? r.sym : "", tipoY:r ? r.tipoY : "", setorY:r ? r.setorY : "", industriaY:r ? r.industriaY : "",
       qtd:+x.qtd || 0, total:total != null ? Math.round(total * 100) / 100 : 0, bruto:+x.brutoEUR || null, imposto:+x.impostoEUR || 0, moeda:x.moeda || "", aviso});
