@@ -244,7 +244,7 @@ async function api(path, body, timeout = 90000){
   try{
     const r = await fetch(L.server.replace(/\/+$/, "") + path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(Object.assign({code:L.code}, body || {})), signal:ctl.signal});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || ("Erro " + r.status));
+    if (!r.ok) throw new Error(j.error || ({524:"O servidor demorou demasiado a responder (limite da Cloudflare). Tenta outra vez.", 503:"O servidor ficou sem recursos (limite do plano da Cloudflare). Tenta outra vez daqui a pouco.", 502:"O servidor não conseguiu responder. Tenta outra vez."})[r.status] || ("Erro " + r.status));
     return j;
   }catch(e){
     if (e.name === "AbortError") throw new Error("O servidor demorou demasiado a responder.");
@@ -1040,8 +1040,9 @@ function sinalPill(s, rot){ return `<span class="pill ${s === "positivo" ? "up" 
 function iaBloco(sym, ia){
   if (!ia) return `<div class="card" style="border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>ANÁLISE COM IA</div>
     <p style="line-height:1.55;margin:10px 0">A IA pesquisa dados fundamentais recentes e opiniões de sites de análise, junta os indicadores técnicos deste gráfico e escreve uma leitura do ativo.</p>
-    <button class="btn pri" id="iaBtn" onclick="pedirAnalise('${esc(sym)}')"><svg class="i"><use href="#i-ia"/></svg>Analisar com IA</button>
-    <p class="muted" style="font-size:12px;margin:10px 0 0">Demora cerca de 30 a 60 segundos.</p></div>`;
+    ${PEND.an[sym] ? `<button class="btn pri" id="iaBtn" disabled><span class="spin" aria-hidden="true"></span> A analisar… <span data-t0="${PEND.an[sym]}">${tempoTxt(PEND.an[sym])}</span></button>` : `<button class="btn pri" id="iaBtn" onclick="pedirAnalise('${esc(sym)}')"><svg class="i"><use href="#i-ia"/></svg>Analisar com IA</button>`}
+    ${ERRO.an[sym] && !PEND.an[sym] ? `<div class="warn">${esc(ERRO.an[sym])}</div>` : ""}
+    <p class="muted" style="font-size:12px;margin:10px 0 0">Demora 1 a 2 minutos (nos ETFs também lê o justETF). Podes mudar de ecrã entretanto.</p></div>`;
   return `<div class="card" style="border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>ANÁLISE COM IA · ${new Date(ia.quando).toLocaleDateString("pt-PT")}</div>
     <p style="line-height:1.55;margin:10px 0;font-size:15px">${esc(ia.resumo)}</p>
     <div class="chips">${sinalPill(ia.sinalTecnico, "Técnica")}${sinalPill(ia.sinalFundamental, "Fundamental")}</div></div>
@@ -1052,18 +1053,27 @@ function iaBloco(sym, ia){
   ${ia.oportunidades && ia.oportunidades.length ? `<h2 style="margin-top:14px">A favor</h2><ul style="margin:0 0 10px;padding-left:18px;line-height:1.6">${ia.oportunidades.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
   ${ia.riscos && ia.riscos.length ? `<h2 style="margin-top:14px">Riscos</h2><ul style="margin:0;padding-left:18px;line-height:1.6">${ia.riscos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>
   ${ia.fontes && ia.fontes.length ? `<div class="card"><h2>Fontes consultadas</h2><div class="srcs">${ia.fontes.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div></div>` : ""}
-  <button class="btn" id="iaBtn" onclick="pedirAnalise('${esc(sym)}', true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar análise</button>
+  ${PEND.an[sym] ? `<button class="btn" disabled><span class="spin" aria-hidden="true"></span> A atualizar… <span data-t0="${PEND.an[sym]}">${tempoTxt(PEND.an[sym])}</span></button>` : `<button class="btn" id="iaBtn" onclick="pedirAnalise('${esc(sym)}', true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar análise</button>`}
+  ${ERRO.an[sym] && !PEND.an[sym] ? `<div class="warn">${esc(ERRO.an[sym])}</div>` : ""}
   <p class="muted" style="font-size:12px;margin:0">Análise automática a partir de fontes públicas. Não é aconselhamento financeiro.</p>`;
 }
+function redesenharIA(sym){ const box = document.getElementById("iaBox"); if (box && VIEW === "analise") box.innerHTML = iaBloco(sym, vivos("analises").find(x => x.id === sym)); }
 async function pedirAnalise(sym, forcar){
-  const b = $("#iaBtn"); if (b){ b.disabled = true; b.innerHTML = `<span class="spin" aria-hidden="true"></span> A analisar…`; }
+  if (PEND.an[sym]) return;
+  PEND.an[sym] = Date.now(); ERRO.an[sym] = ""; redesenharIA(sym);
   const d = analiseDados[sym] || {}, pos = posicoes().find(x => x.sym === sym && x.qtd > 0), a = ativo(sym) || {};
   try{
-    const r = await api("/api/analisar", {sym, nome:(d.p || {}).nome || a.nome, tipo:a.tipo || (d.p || {}).tipoY, tipoY:(d.p || {}).tipoY || a.tipoY || "", isin:a.isin || "", moeda:(d.p || {}).moeda, ind:d.ind, posicao:pos ? {investido:Math.round(pos.custo), valor:Math.round(pos.valor), rendimento:+(pos.rend * 100).toFixed(1)} : {}, forcar:!!forcar}, 150000);
+    const r = await api("/api/analisar", {sym, nome:(d.p || {}).nome || a.nome, tipo:a.tipo || (d.p || {}).tipoY, tipoY:(d.p || {}).tipoY || a.tipoY || "", isin:a.isin || "", moeda:(d.p || {}).moeda, ind:d.ind, posicao:pos ? {investido:Math.round(pos.custo), valor:Math.round(pos.valor), rendimento:+(pos.rend * 100).toFixed(1)} : {}, forcar:!!forcar}, 540000);
     upsert("analises", Object.assign({id:sym}, r));
-    const box = document.getElementById("iaBox"); if (box) box.innerHTML = iaBloco(sym, vivos("analises").find(x => x.id === sym));
-  }catch(e){ toast(e.message, 6000); if (b){ b.disabled = false; b.innerHTML = "Tentar outra vez"; } }
+  }catch(e){ ERRO.an[sym] = e.message; toast(e.message, 6000); sync(); }
+  finally{ delete PEND.an[sym]; redesenharIA(sym); }
 }
+
+/* ---------- pedidos à IA em curso ---------- */
+const PEND = {sug:null, an:{}}, ERRO = {sug:"", an:{}};
+const segs = t0 => Math.round((Date.now() - t0) / 1000);
+const tempoTxt = t0 => { const s = segs(t0); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s"; };
+setInterval(() => document.querySelectorAll("[data-t0]").forEach(el => el.textContent = tempoTxt(+el.dataset.t0)), 1000);
 
 /* ---------- SUGESTÕES ---------- */
 function vSugestoes(m){
@@ -1075,7 +1085,8 @@ function vSugestoes(m){
       <div><div class="lab muted2" style="font-size:13px;margin-bottom:6px">Horizonte</div><div class="seg" role="group" aria-label="Horizonte">${[["curto","< 3 anos"],["medio","3–10 anos"],["longo","> 10 anos"]].map(p => `<button type="button" class="${(cfg.horizonte || "longo") === p[0] ? "on" : ""}" onclick="setCfg('horizonte','${p[0]}')">${p[1]}</button>`).join("")}</div></div>
     </div>
     <label class="f">Preferências (opcional)<input class="in" id="sPref" value="${esc(cfg.pref || "")}" placeholder="Ex.: prefiro ETFs de acumulação, gosto de dividendos, evitar petróleo" onchange="setCfg('pref', this.value, true)"></label>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn pri" id="sgBtn" onclick="pedirSugestoes()"><svg class="i"><use href="#i-ia"/></svg>${sg ? "Gerar novas sugestões" : "Gerar sugestões"}</button><span class="muted" style="font-size:13px">A IA lê a tua carteira e pesquisa análises recentes. Demora cerca de 1 minuto.</span></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${PEND.sug ? `<button class="btn pri" id="sgBtn" disabled><span class="spin" aria-hidden="true"></span> A pesquisar e a analisar… <span data-t0="${PEND.sug}">${tempoTxt(PEND.sug)}</span></button><span class="muted" style="font-size:13px">Pode demorar 2 a 4 minutos. Podes mudar de ecrã: o resultado aparece aqui quando estiver pronto.</span>` : `<button class="btn pri" id="sgBtn" onclick="pedirSugestoes()"><svg class="i"><use href="#i-ia"/></svg>${sg ? "Gerar novas sugestões" : "Gerar sugestões"}</button><span class="muted" style="font-size:13px">A IA lê a tua carteira, pesquisa análises recentes e confirma os ETFs no justETF. Demora 2 a 4 minutos.</span>`}</div>
+    ${ERRO.sug && !PEND.sug ? `<div class="warn" style="margin:0"><strong>Não foi possível gerar as sugestões.</strong> ${esc(ERRO.sug)}</div>` : ""}
   </div>
   ${sg ? `
   <div class="card" style="margin-bottom:14px;border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>RESUMO · ${new Date(sg.quando).toLocaleDateString("pt-PT")}</div><p style="line-height:1.55;margin:10px 0 0;font-size:15px">${esc(sg.resumo)}</p>
@@ -1096,15 +1107,18 @@ function vSugestoes(m){
 function setCfg(k, v, silencioso){ S.cfg = Object.assign({}, S.cfg, {[k]:v}); touch(S.cfg); save(); if (!silencioso) render(); }
 function addIdeia(i){ const x = (S.sugestoes.ideias || [])[i]; if (!x) return; if (x.isin && !ativo(x.sym)) upsert("ativos", {id:x.sym, nome:x.nome, isin:x.isin, tipo:x.tipo, tipoY:x.tipo === "ETF" ? "ETF" : "", setores:{"Outros":100}, fonte:"pendente"}); abrirOp(null, {sym:x.sym, nome:x.nome, tipoY:x.tipo === "ETF" ? "ETF" : x.tipo === "Cripto" ? "CRYPTOCURRENCY" : "EQUITY"}); }
 async function pedirSugestoes(){
+  if (PEND.sug) return;
+  const pref = $("#sPref"); if (pref && pref.value !== (S.cfg.pref || "")) setCfg("pref", pref.value, true);
   const ps = posicoes(), t = totais(ps), ex = exposicao(ps);
-  const b = $("#sgBtn"); b.disabled = true; b.innerHTML = `<span class="spin" aria-hidden="true"></span> A pensar… (cerca de 1 minuto)`;
+  PEND.sug = Date.now(); ERRO.sug = ""; render();
   const carteira = {valorTotalEUR:Math.round(t.valor), rendimentoTotal:+(t.rend * 100).toFixed(1),
     posicoes:ps.filter(p => p.qtd > 0 && p.temPreco).map(p => ({sym:p.sym, nome:p.nome, tipo:p.tipo, pesoPct:+(p.valor / ex.total * 100).toFixed(1), rendimentoPct:+(p.rend * 100).toFixed(1), setores:p.setores})),
     setoresPct:Object.fromEntries(ex.setores.map(x => [x[0], +(x[1] * 100).toFixed(1)])), classesPct:Object.fromEntries(ex.tipos.map(x => [x[0], +(x[1] * 100).toFixed(1)])), moedasPct:Object.fromEntries(ex.moedas.map(x => [x[0], +(x[1] * 100).toFixed(1)]))};
   try{
-    const r = await api("/api/sugestoes", {carteira, perfil:{risco:S.cfg.perfil || "moderado", horizonte:S.cfg.horizonte || "longo", preferencias:S.cfg.pref || ""}}, 200000);
-    S.sugestoes = r; save(); render(); toast("Sugestões prontas.");
-  }catch(e){ toast(e.message, 6000); b.disabled = false; b.textContent = "Tentar outra vez"; }
+    const r = await api("/api/sugestoes", {carteira, perfil:{risco:S.cfg.perfil || "moderado", horizonte:S.cfg.horizonte || "longo", preferencias:S.cfg.pref || ""}}, 540000);
+    S.sugestoes = r; save(); toast("Sugestões prontas.");
+  }catch(e){ ERRO.sug = e.message; toast(e.message, 6000); sync(); }
+  finally{ PEND.sug = null; render(); }
 }
 
 /* ---------- DEFINIÇÕES ---------- */

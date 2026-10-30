@@ -168,7 +168,7 @@ async function claude(env, system, prompt, {maxTokens = 4000, searches = 0, fetc
   const messages = [{role:"user", content:prompt}];
   let tools = [];
   if (searches) tools.push({type:"web_search_20250305", name:"web_search", max_uses:searches});
-  if (fetches) tools.push(Object.assign({type:"web_fetch_20250910", name:"web_fetch", max_uses:fetches, max_content_tokens:25000}, fetchDomains ? {allowed_domains:fetchDomains} : {}));
+  if (fetches) tools.push(Object.assign({type:"web_fetch_20250910", name:"web_fetch", max_uses:fetches, max_content_tokens:8000}, fetchDomains ? {allowed_domains:fetchDomains} : {}));
   if (!tools.length) tools = undefined;
   const fontes = new Map();
   let texto = "";
@@ -255,7 +255,7 @@ Este ativo é um ETF: é OBRIGATÓRIO ler a página do ETF no justETF (justetf.c
 Indicadores técnicos calculados pela app (JSON): ${JSON.stringify(body.ind || {}).slice(0, 4000)}
 Posição do investidor neste ativo (JSON, pode estar vazia): ${JSON.stringify(body.posicao || {}).slice(0, 1000)}
 ${isETF && isin ? `Página do ETF no justETF: https://www.justetf.com/pt/etf-profile.html?isin=${isin}\n` : ""}Hoje é ${lisbonDay()}.`;
-  const {out, fontes} = await claude(env, system, prompt, isETF ? {maxTokens:5000, searches:5, fetches:3, fetchDomains:["justetf.com"]} : {maxTokens:4000, searches:5});
+  const {out, fontes} = await claude(env, system, prompt, isETF ? {maxTokens:5000, searches:4, fetches:2, fetchDomains:["justetf.com"]} : {maxTokens:4000, searches:4});
   const res = {sym, quando:Date.now(), resumo:String(out.resumo || ""), sinalTecnico:out.sinalTecnico || "neutro", sinalFundamental:out.sinalFundamental || "neutro", tecnica:String(out.tecnica || ""),
     metricas:(out.metricas || []).slice(0, 10), fundamental:String(out.fundamental || ""), consenso:String(out.consenso || ""), riscos:(out.riscos || []).slice(0, 6), oportunidades:(out.oportunidades || []).slice(0, 6), fontes:fontes.slice(0, 10), justetf:isETF && out.justetf && typeof out.justetf === "object" ? out.justetf : null};
   await cachePut(env, ck, res);
@@ -275,7 +275,7 @@ Regras: 4 a 6 ideias diferentes; prefere ativos acessíveis a um investidor euro
   const prompt = `Carteira (JSON): ${JSON.stringify(body.carteira || {}).slice(0, 20000)}
 Perfil do investidor: ${JSON.stringify(body.perfil || {}).slice(0, 500)}
 Hoje é ${lisbonDay()}.`;
-  const {out, fontes} = await claude(env, system, prompt, {maxTokens:6000, searches:8, fetches:6, fetchDomains:["justetf.com"]});
+  const {out, fontes} = await claude(env, system, prompt, {maxTokens:6000, searches:5, fetches:4, fetchDomains:["justetf.com"]});
   return {quando:Date.now(), upd:Date.now(), resumo:String(out.resumo || ""), alertas:(out.alertas || []).slice(0, 6), ideias:(out.ideias || []).slice(0, 8), fontes:fontes.slice(0, 12)};
 }
 
@@ -415,8 +415,18 @@ export default {
       if (p === "/api/precos") return json(await precos(env, body));
       if (p === "/api/pesquisa") return json(await pesquisa(env, body));
       if (p === "/api/classificar") return json(await classificar(env, key, body));
-      if (p === "/api/analisar") return json(await analisar(env, key, body));
-      if (p === "/api/sugestoes") return json(await sugestoes(env, key, body));
+      if (p === "/api/analisar"){
+        const r = await analisar(env, key, body);
+        const st = await getVal(env, key);
+        if (st){ const lista = (st.analises || []).filter(x => x.id !== r.sym); lista.push(Object.assign({id:r.sym}, r, {upd:Date.now()})); st.analises = lista.slice(-40); await putVal(env, key, st); }
+        return json(r);
+      }
+      if (p === "/api/sugestoes"){
+        const r = await sugestoes(env, key, body);
+        const st = await getVal(env, key);
+        if (st){ st.sugestoes = r; await putVal(env, key, st); }
+        return json(r);
+      }
       if (p === "/api/importar") return json(await importar(env, key, body));
       return json({error:"Endereço desconhecido."}, 404);
     }catch(e){
