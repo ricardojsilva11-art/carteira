@@ -70,80 +70,116 @@ async function yahoo(path){
   throw err(`O serviço de preços não respondeu (${last}).`, 502);
 }
 const symOk = s => /^[A-Za-z0-9.\-=^]{1,24}$/.test(s);
-async function chart(env, sym, range, ctx){
-  const ck = `ch3:${sym}:${range}`, maxAge = range === "5d" ? 3 * 60e3 : 10 * 60e3;
-  if (ctx && ctx.pre){ const r = ctx.pre.get(ck); if (r && Date.now() - r.t < maxAge) return JSON.parse(r.v); }
-  else { const hit = await cacheGet(env, ck, maxAge); if (hit) return hit; }
+/* histórico (cache 6 h) separado do preço de agora (cache 3 min): menos processamento e menos pedidos ao Yahoo */
+const H_MAX = 6 * 3600e3, LIVE_MAX = 3 * 60e3;
+function compactar(h2){
+  /* mais de 2 anos atrás: um ponto por semana, só data e fecho (chega para o gráfico da carteira) */
+  const lim = new Date(Date.now() - 730 * 864e5).toISOString().slice(0, 10), out = [];
+  let semana = null;
+  for (const h of h2){
+    if (h[0] >= lim){ out.push([h[0], h[1], h[2], h[3]]); continue; }
+    const d = new Date(h[0] + "T00:00:00Z"), k = Math.floor((d.getTime() / 864e5 + 3) / 7);
+    if (k === semana) out[out.length - 1] = [h[0], h[1]]; else { out.push([h[0], h[1]]); semana = k; }
+  }
+  return out;
+}
+async function buscarHist(env, sym, range){
   const j = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=1d&includePrePost=false&events=div%2Csplit`);
   const r = j && j.chart && j.chart.result && j.chart.result[0];
   if (!r) throw err(`Ativo «${sym}» não encontrado.`, 404);
   const m = r.meta || {}, q = ((r.indicators || {}).quote || [{}])[0] || {}, ts = r.timestamp || [];
   const tz = m.exchangeTimezoneName || "UTC";
-  const dayOf = t => new Intl.DateTimeFormat("en-CA", {timeZone:tz}).format(new Date(t * 1000));
-  const hist = [];
-  ts.forEach((t, i) => { const c = q.close && q.close[i]; if (c != null && isFinite(c)) hist.push([dayOf(t), +c.toFixed(6), q.high && q.high[i] != null ? +(+q.high[i]).toFixed(6) : c, q.low && q.low[i] != null ? +(+q.low[i]).toFixed(6) : c, q.volume && q.volume[i] || 0]); });
-  /* um dia pode aparecer duas vezes (barra do dia em curso): fica a última */
-  const byDay = new Map(); hist.forEach(h => byDay.set(h[0], h));
+  const fmt = new Intl.DateTimeFormat("en-CA", {timeZone:tz});
+  const dayOf = t => fmt.format(new Date(t * 1000));
+  const byDay = new Map();
+  ts.forEach((t, i) => { const c = q.close && q.close[i]; if (c != null && isFinite(c)) byDay.set(dayOf(t), [dayOf(t), +c.toFixed(5), q.high && q.high[i] != null ? +(+q.high[i]).toFixed(5) : +c.toFixed(5), q.low && q.low[i] != null ? +(+q.low[i]).toFixed(5) : +c.toFixed(5)]); });
   const h2 = [...byDay.values()];
-  let price = +(m.regularMarketPrice != null ? m.regularMarketPrice : (h2.length ? h2[h2.length - 1][1] : 0));
-  const today = m.regularMarketTime ? dayOf(m.regularMarketTime) : (h2.length ? h2[h2.length - 1][0] : "");
-  const prevBar = [...h2].reverse().find(h => h[0] < today);
-  /* preço de agora: o histórico diário às vezes falha dias (ETFs em Londres) e não tem pré-abertura/após-fecho */
-  let anterior = prevBar ? prevBar[1] : (m.chartPreviousClose || price), sessao = "", hora = m.regularMarketTime || 0;
-  if (!/=X$/.test(sym)){
-    try{
-      const jl = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=5m&includePrePost=true`);
-      const rl = jl && jl.chart && jl.chart.result && jl.chart.result[0];
-      if (rl){
-        const ml = rl.meta || {}, tl = rl.timestamp || [], cl = (((rl.indicators || {}).quote || [{}])[0] || {}).close || [];
-        if (ml.regularMarketPrice != null) price = +ml.regularMarketPrice;
-        if (ml.chartPreviousClose != null) anterior = +ml.chartPreviousClose;
-        if (ml.regularMarketTime) hora = ml.regularMarketTime;
-        let lt = null, lp = null;
-        for (let i = tl.length - 1; i >= 0; i--) if (cl[i] != null && isFinite(cl[i])){ lt = tl[i]; lp = +cl[i]; break; }
-        const reg = (ml.currentTradingPeriod || {}).regular || {};
-        if (lt && ml.regularMarketTime && lt > ml.regularMarketTime + 120 && lp > 0){
-          price = lp; hora = lt;
-          sessao = reg.start && lt < reg.start ? "pré-abertura" : "após fecho";
-        }
-      }
-    }catch(e){ /* fica o preço do histórico diário */ }
-  }
   const divs = Object.values(((r.events || {}).dividends) || {}).filter(d => d && d.amount > 0 && d.date).map(d => [dayOf(d.date), +(+d.amount).toFixed(6)]).sort((a, b) => a[0].localeCompare(b[0]));
-  const out = {divs, sym:m.symbol || sym, nome:m.longName || m.shortName || sym, moeda:m.currency || "", tipoY:m.instrumentType || "", bolsa:m.fullExchangeName || m.exchangeName || "",
-    preco:price, anterior, sessao, hora, dia:today, max52:m.fiftyTwoWeekHigh || null, min52:m.fiftyTwoWeekLow || null, hist:h2};
-  if (ctx && ctx.writes) ctx.writes.push([ck, JSON.stringify(out)]);
-  else await cachePut(env, ck, out);
-  return out;
+  const last = h2.length ? h2[h2.length - 1] : null;
+  const H = {divs, sym:m.symbol || sym, nome:m.longName || m.shortName || sym, moeda:m.currency || "", tipoY:m.instrumentType || "", bolsa:m.fullExchangeName || m.exchangeName || "",
+    max52:m.fiftyTwoWeekHigh || null, min52:m.fiftyTwoWeekLow || null, hist:compactar(h2)};
+  /* preço de recurso, caso o pedido do preço de agora falhe */
+  const L = {preco:+(m.regularMarketPrice != null ? m.regularMarketPrice : (last ? last[1] : 0)), anterior:+(m.chartPreviousClose || (h2.length > 1 ? h2[h2.length - 2][1] : 0)) || null, sessao:"", hora:m.regularMarketTime || 0, dia:m.regularMarketTime ? dayOf(m.regularMarketTime) : (last ? last[0] : "")};
+  return {H, L};
+}
+async function buscarLive(env, sym){
+  const j = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=5m&includePrePost=${/=X$/.test(sym) ? "false" : "true"}`);
+  const r = j && j.chart && j.chart.result && j.chart.result[0];
+  if (!r) return null;
+  const m = r.meta || {}, tl = r.timestamp || [], cl = (((r.indicators || {}).quote || [{}])[0] || {}).close || [];
+  let preco = m.regularMarketPrice != null ? +m.regularMarketPrice : null, hora = m.regularMarketTime || 0, sessao = "";
+  let lt = null, lp = null;
+  for (let i = tl.length - 1; i >= 0; i--) if (cl[i] != null && isFinite(cl[i])){ lt = tl[i]; lp = +cl[i]; break; }
+  if (preco == null && lp != null){ preco = lp; hora = lt; }
+  const reg = (m.currentTradingPeriod || {}).regular || {};
+  if (!/=X$/.test(sym) && lt && m.regularMarketTime && lt > m.regularMarketTime + 120 && lp > 0){ preco = lp; hora = lt; sessao = reg.start && lt < reg.start ? "pré-abertura" : "após fecho"; }
+  if (preco == null) return null;
+  const tz = m.exchangeTimezoneName || "UTC";
+  return {preco, anterior:m.chartPreviousClose != null ? +m.chartPreviousClose : null, sessao, hora, dia:hora ? new Intl.DateTimeFormat("en-CA", {timeZone:tz}).format(new Date(hora * 1000)) : ""};
+}
+/* junta o histórico (texto JSON guardado) com o preço de agora, sem voltar a ler o JSON todo */
+const juntar = (rawH, L) => rawH.slice(0, -1) + "," + JSON.stringify(L).slice(1);
+/* para quem precisa do objeto (importação): lê e junta */
+async function chart(env, sym, range){
+  const [h, l] = await Promise.all([cacheGet(env, `h4:${sym}:${range}`, H_MAX), cacheGet(env, `l4:${sym}`, LIVE_MAX)]);
+  if (h && l) return Object.assign({}, h, l);
+  const f = await buscarHist(env, sym, range);
+  await cachePut(env, `h4:${sym}:${range}`, f.H);
+  let L = l; if (!L){ try{ L = await buscarLive(env, sym); }catch(e){} if (L) await cachePut(env, `l4:${sym}`, L); }
+  return Object.assign({}, f.H, L || f.L);
 }
 /* converte para euros: GBp (pence) → GBP/100; outras moedas pelo par XXXEUR=X */
 async function precos(env, body){
-  const syms = [...new Set((body.symbols || []).map(s => String(s).trim()).filter(symOk))].slice(0, 60);
+  const syms = [...new Set((body.symbols || []).map(s => String(s).trim()).filter(symOk))].slice(0, 40);
   const range = ["5d","1mo","6mo","1y","2y","5y","10y","max"].includes(body.range) ? body.range : "1y";
-  const out = {}, erros = {};
-  /* uma só leitura da cache para todos os ativos e câmbios (limite de consultas por pedido) */
+  const erros = {}, now = Date.now();
   await ensure(env);
-  const moedasProv = ["USD","GBP","CHF","JPY","CAD","AUD","DKK","SEK","NOK","HKD"].map(c => `ch3:${c}EUR=X:${range}`);
-  const keys = syms.map(s => `ch3:${s}:${range}`).concat(moedasProv);
+  const moedasProv = ["USD","GBP","CHF","JPY","CAD","AUD","DKK","SEK","NOK","HKD"].map(c => `${c}EUR=X`);
+  const todos = syms.concat(moedasProv);
+  const keys = todos.map(s => `h4:${s}:${range}`).concat(todos.map(s => `l4:${s}`));
   const pre = new Map();
   for (let i = 0; i < keys.length; i += 90){
     const part = keys.slice(i, i + 90);
     const r = await env.DB.prepare(`SELECT k, v, t FROM cache WHERE k IN (${part.map(() => "?").join(",")})`).bind(...part).all();
     (r.results || []).forEach(x => pre.set(x.k, x));
   }
-  const ctx = {pre, writes:[]};
-  await Promise.all(syms.map(async s => { try{ out[s] = await chart(env, s, range, ctx); }catch(e){ erros[s] = e.message; } }));
-  const moedas = new Set(Object.values(out).map(x => x.moeda === "GBp" || x.moeda === "GBX" ? "GBP" : x.moeda).filter(c => c && c !== "EUR"));
-  const fx = {EUR:{preco:1, hist:[]}};
-  await Promise.all([...moedas].map(async c => {
-    try{ const r = await chart(env, `${c}EUR=X`, range, ctx); fx[c] = {preco:r.preco, hist:r.hist.map(h => [h[0], h[1]])}; }
-    catch(e){ erros[`${c}EUR`] = "Câmbio indisponível: " + e.message; }
-  }));
-  if (ctx.writes.length){
-    const now = Date.now();
-    await env.DB.batch(ctx.writes.map(([k, v]) => env.DB.prepare("INSERT INTO cache (k, v, t) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, t = excluded.t").bind(k, v, now)));
+  const writes = [];
+  let pedidos = 0;
+  const um = async s => {
+    const hk = `h4:${s}:${range}`, lk = `l4:${s}`;
+    const ph = pre.get(hk), pl = pre.get(lk);
+    let rawH = ph && now - ph.t < H_MAX ? ph.v : null, L = pl && now - pl.t < LIVE_MAX ? JSON.parse(pl.v) : null, Lrec = null;
+    if (!rawH){
+      if (++pedidos > 44) throw err("Demasiados ativos para atualizar de uma vez; tenta outra vez daqui a pouco.", 503);
+      const f = await buscarHist(env, s, range);
+      rawH = JSON.stringify(f.H); writes.push([hk, rawH]); Lrec = f.L;
+    }
+    if (!L){
+      if (pedidos < 44){ pedidos++; try{ L = await buscarLive(env, s); }catch(e){ L = null; } if (L) writes.push([lk, JSON.stringify(L)]); }
+      if (!L && pl) L = JSON.parse(pl.v);           /* preço guardado mais antigo */
+      if (!L) L = Lrec;
+      if (!L){ const H = JSON.parse(rawH), h = H.hist, u = h[h.length - 1]; L = {preco:u ? u[1] : 0, anterior:h.length > 1 ? h[h.length - 2][1] : null, sessao:"", hora:0, dia:u ? u[0] : ""}; }
+    }
+    if (L.anterior == null){
+      /* sem fecho anterior no preço de agora: vai ao histórico (só neste caso lê o JSON) */
+      const h = JSON.parse(rawH).hist, ant = [...h].reverse().find(x => x[0] < (L.dia || "9999"));
+      L = Object.assign({}, L, {anterior:ant ? ant[1] : L.preco});
+    }
+    return juntar(rawH, L);
+  };
+  const outRaw = {};
+  await Promise.all(syms.map(async s => { try{ outRaw[s] = await um(s); }catch(e){ erros[s] = e.message; } }));
+  const moedas = new Set();
+  Object.values(outRaw).forEach(r => { const m = /"moeda":"([A-Za-z]*)"/.exec(r); const c = m ? (m[1] === "GBp" || m[1] === "GBX" ? "GBP" : m[1]) : ""; if (c && c !== "EUR") moedas.add(c); });
+  const fxRaw = {};
+  await Promise.all([...moedas].map(async c => { try{ fxRaw[c] = await um(`${c}EUR=X`); }catch(e){ erros[`${c}EUR`] = "Câmbio indisponível: " + e.message; } }));
+  if (writes.length){
+    for (let i = 0; i < writes.length; i += 40)
+      await env.DB.batch(writes.slice(i, i + 40).map(([k, v]) => env.DB.prepare("INSERT INTO cache (k, v, t) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, t = excluded.t").bind(k, v, now)));
   }
-  return {precos:out, fx, erros, quando:Date.now()};
+  const obj = o => "{" + Object.entries(o).map(([k, v]) => JSON.stringify(k) + ":" + v).join(",") + "}";
+  return new Response(`{"precos":${obj(outRaw)},"fx":${obj(Object.assign({EUR:'{"preco":1,"hist":[]}'}, fxRaw))},"erros":${JSON.stringify(erros)},"quando":${Date.now()}}`,
+    {headers:Object.assign({"content-type":"application/json; charset=utf-8"}, CORS)});
 }
 async function pesquisa(env, body){
   const q = String(body.q || "").trim().slice(0, 60);
@@ -452,7 +488,7 @@ export default {
       }
       /* o resto só funciona para códigos que já sincronizaram (evita uso por estranhos) */
       if (!(await getVal(env, key))) return json({error:"Sincroniza primeiro este código pessoal."}, 403);
-      if (p === "/api/precos") return json(await precos(env, body));
+      if (p === "/api/precos") return await precos(env, body);
       if (p === "/api/pesquisa") return json(await pesquisa(env, body));
       if (p === "/api/classificar") return json(await classificar(env, key, body));
       if (p === "/api/analisar"){

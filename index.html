@@ -248,7 +248,13 @@ async function api(path, body, timeout = 90000){
     return j;
   }catch(e){
     if (e.name === "AbortError") throw new Error("O servidor demorou demasiado a responder.");
-    if (e instanceof TypeError) throw new Error("Sem ligação ao servidor. Confirma o endereço nas Definições.");
+    if (e instanceof TypeError){
+      /* distingue «sem internet / endereço errado» de «o servidor falhou neste pedido» */
+      let vivo = false;
+      try{ const c = new AbortController(); setTimeout(() => c.abort(), 8000); const g = await fetch(L.server.replace(/\/+$/, "") + "/", {signal:c.signal}); vivo = g.ok; }catch(x){}
+      if (vivo) throw new Error("O servidor está ligado mas não conseguiu responder a este pedido (limite de processamento da Cloudflare). Tenta outra vez; se repetir, avisa.");
+      throw new Error("Sem ligação ao servidor. Confirma a internet e o endereço do servidor nas Definições.");
+    }
     throw e;
   }finally{ clearTimeout(t); }
 }
