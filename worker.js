@@ -742,6 +742,7 @@ async function avisosDe(env, k, st, L, orc){
   /* variação forte do dia nas posições */
   if (+cfg.variacao > 0 && L.min >= 8 * 60 && L.min < 23 * 60) Object.keys(q).forEach(s => {
     const x = P[s]; if (!x || !(x.anterior > 0) || !(x.preco > 0)) return;
+    if (x.dia && x.dia !== L.dia) return;   /* só a sessão de hoje (ao fim de semana não repete a de sexta) */
     const v = x.preco / x.anterior - 1;
     if (Math.abs(v) * 100 >= +cfg.variacao){
       const efeito = paraEUR(q[s] * (x.preco - x.anterior), moedas[s], fx);
