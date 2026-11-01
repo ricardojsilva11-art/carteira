@@ -8,6 +8,11 @@
    - POST /api/analisar   análise técnica + fundamental com IA e pesquisa na web
    - POST /api/sugestoes  sugestões de investimento para a carteira (IA + web + justETF)
    - POST /api/importar   lê o extrato da corretora (CSV, Excel convertido, PDF) com IA
+   - POST /api/calendario  dividendos (anunciados e estimados) e resultados
+   - POST /api/composicao  posições, países e setores dentro de um ETF (IA + justETF)
+   - POST /api/resumo     resumo semanal da carteira com IA
+   - POST /api/push/*     notificações no iPhone e no PC (Web Push)
+   - cron (de 15 em 15 min): alertas de preço, variações, dividendos, resultados e resumo de domingo
    Ligações: D1 «DB» (obrigatória). Segredo: ANTHROPIC_API_KEY (para a IA).
    Variáveis opcionais: MODEL (claude-sonnet-5-5), IA_LIMITE_DIA (40).
    ============================================================ */
@@ -30,7 +35,9 @@ async function ensure(env){
   if (ready) return;
   await env.DB.batch([
     env.DB.prepare("CREATE TABLE IF NOT EXISTS estado (k TEXT PRIMARY KEY, v TEXT NOT NULL, upd INTEGER NOT NULL)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, v TEXT NOT NULL, t INTEGER NOT NULL)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, v TEXT NOT NULL, t INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS subs (endpoint TEXT PRIMARY KEY, k TEXT NOT NULL, sub TEXT NOT NULL, nome TEXT, upd INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS enviados (id TEXT PRIMARY KEY, t INTEGER)")
   ]);
   ready = true;
 }
@@ -465,13 +472,348 @@ Regras: um item por operação executada (junta execuções parciais da mesma or
   return {corretora:String(out.corretora || body.corretora || ""), resumo:String(out.resumo || ""), ignorados:String(out.ignorados || ""), itens:final};
 }
 
+
+/* ============================================================
+   CALENDÁRIO: dividendos e resultados
+   ============================================================ */
+const lisboaDia = (d = new Date()) => new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Lisbon"}).format(d);
+const addDia = (dia, n) => { const [y, m, d] = dia.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+const diaDeTs = t => t ? new Date(t * 1000).toISOString().slice(0, 10) : "";
+/* cookie + crumb do Yahoo (necessários para datas de resultados e de dividendos anunciados) */
+async function yCrumb(env){
+  const c = await cacheGet(env, "sys:ycrumb", 12 * 3600e3); if (c) return c.falhou ? null : c;
+  try{
+    const r1 = await fetch("https://fc.yahoo.com/", {headers:{"user-agent":UA["user-agent"]}, redirect:"manual"});
+    const sc = r1.headers.get("set-cookie") || "";
+    const cookie = sc.split(/,(?=\s*[A-Za-z0-9_]+=)/).map(x => x.split(";")[0].trim()).filter(x => /^A[13S]=/.test(x)).join("; ");
+    if (cookie){
+      const r2 = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {headers:{"user-agent":UA["user-agent"], cookie}});
+      const crumb = (await r2.text()).trim();
+      if (r2.ok && crumb && crumb.length < 40 && !/[<{ ]/.test(crumb)){ const o = {cookie, crumb}; await cachePut(env, "sys:ycrumb", o); return o; }
+    }
+  }catch(e){}
+  await cachePut(env, "sys:ycrumb", {falhou:true});   /* não insiste durante 12 h */
+  return null;
+}
+async function eventosYahoo(env, sym){
+  const c = await yCrumb(env); if (!c) return null;
+  try{
+    const r = await fetch(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=calendarEvents%2CsummaryDetail&crumb=${encodeURIComponent(c.crumb)}`, {headers:{"user-agent":UA["user-agent"], cookie:c.cookie, accept:"application/json"}});
+    if (r.status === 401 || r.status === 403){ await cachePut(env, "sys:ycrumb", {falhou:true}); return null; }
+    const j = await r.json(); const q = (((j || {}).quoteSummary || {}).result || [])[0]; if (!q) return null;
+    const ce = q.calendarEvents || {}, sd = q.summaryDetail || {};
+    const raw = x => x && x.raw ? x.raw : null;
+    return {exDiv:diaDeTs(raw(ce.exDividendDate) || raw(sd.exDividendDate)), payDiv:diaDeTs(raw(ce.dividendDate)),
+      resultados:((ce.earnings || {}).earningsDate || []).map(x => diaDeTs(raw(x))).filter(Boolean), taxaDiv:raw(sd.dividendRate)};
+  }catch(e){ return null; }
+}
+/* informação de calendário de um ativo (cache 12 h) */
+async function calInfo(env, sym, orc){
+  const ck = `cal:${sym}`;
+  const hit = await cacheGet(env, ck, 12 * 3600e3); if (hit) return hit;
+  if (orc && orc.n <= 0) return null;
+  if (orc) orc.n -= 2;
+  const j = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=5y&interval=3mo&events=div`);
+  const r = j && j.chart && j.chart.result && j.chart.result[0]; if (!r) return null;
+  const m = r.meta || {}, tz = m.exchangeTimezoneName || "UTC", fmt = new Intl.DateTimeFormat("en-CA", {timeZone:tz});
+  const divs = Object.values(((r.events || {}).dividends) || {}).filter(d => d && d.amount > 0 && d.date).map(d => [fmt.format(new Date(d.date * 1000)), +(+d.amount).toFixed(6)]).sort((a, b) => a[0].localeCompare(b[0]));
+  const ev = /=X$|-(EUR|USD)$/.test(sym) ? null : await eventosYahoo(env, sym);
+  const hoje = lisboaDia();
+  /* frequência habitual e próximos pagamentos estimados */
+  let gap = 0; const prox = [];
+  if (divs.length >= 2){
+    const gs = []; for (let i = Math.max(1, divs.length - 6); i < divs.length; i++) gs.push((new Date(divs[i][0]) - new Date(divs[i - 1][0])) / 864e5);
+    gs.sort((a, b) => a - b); gap = Math.round(gs[Math.floor(gs.length / 2)]);
+    const ult = divs[divs.length - 1];
+    if (gap >= 20 && (new Date(hoje) - new Date(ult[0])) / 864e5 < gap * 1.8){
+      let d = ult[0];
+      for (let i = 0; i < 24 && prox.length < Math.ceil(400 / gap); i++){ d = addDia(d, gap); if (d > addDia(hoje, -3)) prox.push({ex:d, valor:ult[1], estimado:true}); }
+    }
+  }
+  if (ev && ev.exDiv && ev.exDiv >= addDia(hoje, -10)){
+    const ja = prox.findIndex(p => Math.abs(new Date(p.ex) - new Date(ev.exDiv)) / 864e5 < gap / 2);
+    const ult = divs.length ? divs[divs.length - 1][1] : (ev.taxaDiv ? ev.taxaDiv / 4 : 0);
+    const anunc = {ex:ev.exDiv, pag:ev.payDiv || "", valor:divs.length && divs[divs.length - 1][0] === ev.exDiv ? divs[divs.length - 1][1] : ult, estimado:false};
+    if (ja >= 0) prox[ja] = anunc; else if (!divs.some(d => d[0] === ev.exDiv)) prox.unshift(anunc);
+  }
+  const out = {sym, moeda:m.currency || "", divs:divs.slice(-12), gap, prox:prox.sort((a, b) => a.ex.localeCompare(b.ex)),
+    resultados:ev ? ev.resultados : [], comCalendario:!!ev, quando:Date.now()};
+  await cachePut(env, ck, out);
+  return out;
+}
+async function calendario(env, body){
+  const syms = [...new Set((body.symbols || []).map(s => String(s).trim()).filter(symOk))].slice(0, 30);
+  const orc = {n:40}, cal = {};
+  for (const s of syms){ try{ const c = await calInfo(env, s, orc); if (c) cal[s] = c; }catch(e){} }
+  return {cal, completo:Object.keys(cal).length === syms.length};
+}
+
+/* ============================================================
+   COMPOSIÇÃO DE UM ETF (posições, países, setores) — justETF
+   ============================================================ */
+async function composicao(env, key, body){
+  const sym = String(body.sym || "").trim();
+  if (!symOk(sym)) throw err("Símbolo inválido.", 400);
+  const ck = "comp:" + sym;
+  if (!body.forcar){ const hit = await cacheGet(env, ck, 30 * 864e5); if (hit) return hit; }
+  await limiteIA(env, key);
+  const isin = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(String(body.isin || "")) ? body.isin : "";
+  const system = `Descreves a composição de um ETF para uma app de carteira em português de Portugal.
+Lê a página do ETF no justETF (justetf.com, página "etf-profile") com a ferramenta web_fetch; se não tiveres o endereço, pesquisa «justETF <nome ou ticker> ISIN» primeiro.
+Responde APENAS com JSON:
+{"isin":"","nome":"","indice":"","nPosicoes":número,"top":[{"nome":"nome da empresa","ticker":"ticker principal no Yahoo Finance (ex.: AAPL, MSFT, NVDA, ASML.AS, NESN.SW, 2330.TW)","peso":percentagem}],"paises":{"Estados Unidos":percentagem,...},"setores":{"<setor>":percentagem,...},"data":"data dos dados","nota":"1 frase"}
+"top": as 10 maiores posições com o peso em %; "paises" e "setores": as percentagens indicadas (o resto em "Outros"). Setores possíveis: ${SETORES.join(", ")}. Nomes de países em português. Não inventes números.`;
+  const {out, fontes} = await claude(env, system, `ETF: ${sym} — ${String(body.nome || "").slice(0, 120)}${isin ? `\nPágina no justETF: https://www.justetf.com/pt/etf-profile.html?isin=${isin}` : ""}`, {maxTokens:2500, searches:2, fetches:2, fetchDomains:["justetf.com"]});
+  const norm = o => { const r = {}; Object.entries(o || {}).forEach(([k, v]) => { v = +String(v).replace(",", "."); if (v > 0) r[k] = Math.round(v * 10) / 10; }); return r; };
+  const setores = {}; Object.entries(norm(out.setores)).forEach(([k, v]) => { const n = SETORES.includes(k) ? k : "Outros"; setores[n] = (setores[n] || 0) + v; });
+  const res = {sym, isin:out.isin || isin, nome:String(out.nome || ""), indice:String(out.indice || ""), nPosicoes:+out.nPosicoes || null,
+    top:(Array.isArray(out.top) ? out.top : []).filter(x => x && x.nome && +x.peso > 0).slice(0, 15).map(x => ({nome:String(x.nome).slice(0, 60), ticker:String(x.ticker || "").toUpperCase().slice(0, 15), peso:+(+String(x.peso).replace(",", ".")).toFixed(2)})),
+    paises:norm(out.paises), setores, data:String(out.data || ""), nota:String(out.nota || ""), fontes:fontes.slice(0, 4), quando:Date.now()};
+  await cachePut(env, ck, res);
+  return res;
+}
+
+/* ============================================================
+   CARTEIRA NO SERVIDOR (para alertas e resumo)
+   ============================================================ */
+function quantidades(st){
+  const q = {};
+  (st.ops || []).filter(o => o && !o.del && o.tipo !== "dividendo").sort((a, b) => String(a.data).localeCompare(String(b.data))).forEach(o => {
+    q[o.sym] = q[o.sym] || 0;
+    q[o.sym] = o.tipo === "venda" ? Math.max(0, q[o.sym] - (+o.qtd || 0)) : q[o.sym] + (+o.qtd || 0);
+  });
+  Object.keys(q).forEach(k => { if (q[k] < 1e-9) delete q[k]; });
+  return q;
+}
+async function precosAgora(env, syms, orc){
+  const out = {}, now = Date.now();
+  await ensure(env);
+  const keys = syms.map(s => `l4:${s}`);
+  const pre = new Map();
+  for (let i = 0; i < keys.length; i += 90){ const part = keys.slice(i, i + 90); const r = await env.DB.prepare(`SELECT k, v, t FROM cache WHERE k IN (${part.map(() => "?").join(",")})`).bind(...part).all(); (r.results || []).forEach(x => pre.set(x.k, x)); }
+  const writes = [];
+  for (const s of syms){
+    const p = pre.get(`l4:${s}`);
+    if (p && now - p.t < 10 * 60e3){ out[s] = JSON.parse(p.v); continue; }
+    if (orc.n <= 0){ if (p) out[s] = JSON.parse(p.v); continue; }
+    orc.n--;
+    try{ const L = await buscarLive(env, s); if (L){ out[s] = L; writes.push([`l4:${s}`, JSON.stringify(L)]); } else if (p) out[s] = JSON.parse(p.v); }catch(e){ if (p) out[s] = JSON.parse(p.v); }
+  }
+  if (writes.length) await env.DB.batch(writes.map(([k, v]) => env.DB.prepare("INSERT INTO cache (k, v, t) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, t = excluded.t").bind(k, v, now)));
+  return out;
+}
+const moedaDe = async (env, sym) => { const c = await cacheGet(env, `cal:${sym}`, 90 * 864e5); if (c && c.moeda) return c.moeda; const r = await env.DB.prepare("SELECT v FROM cache WHERE k LIKE ? ORDER BY t DESC LIMIT 1").bind(`h4:${sym}:%`).first(); const m = r ? /"moeda":"([A-Za-z]*)"/.exec(r.v) : null; return m ? m[1] : ""; };
+const paraEUR = (valor, moeda, fx) => { const c = moeda === "GBp" || moeda === "GBX" ? "GBP" : (moeda || "EUR"); const esc = c !== moeda && moeda ? .01 : 1; return c === "EUR" ? valor * esc : valor * esc * (fx[c] || NaN); };
+const eurTxt = v => (Math.round((+v || 0) * 100) / 100).toLocaleString("pt-PT", {minimumFractionDigits:2, maximumFractionDigits:2}) + " €";
+const pctTxt = v => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toLocaleString("pt-PT", {minimumFractionDigits:1, maximumFractionDigits:1}) + " %";
+
+/* ---------- resumo semanal com IA ---------- */
+async function resumoSemanal(env, key, st, viaCron){
+  const q = quantidades(st), syms = Object.keys(q);
+  if (!syms.length) throw err("Ainda não tens posições.", 400);
+  if (!viaCron) await limiteIA(env, key);
+  const orc = {n:30};
+  const moedas = {}; for (const s of syms) moedas[s] = await moedaDe(env, s);
+  const precisaFx = [...new Set(Object.values(moedas).map(m => m === "GBp" || m === "GBX" ? "GBP" : m).filter(m => m && m !== "EUR"))];
+  const L = await precosAgora(env, syms.concat(precisaFx.map(c => `${c}EUR=X`)), orc);
+  const fx = {}; precisaFx.forEach(c => fx[c] = (L[`${c}EUR=X`] || {}).preco);
+  /* preço há uma semana (cache 6 h) */
+  const pos = [];
+  for (const s of syms){
+    let semana = null;
+    try{
+      const ck = `wk:${s}`; let h = await cacheGet(env, ck, 6 * 3600e3);
+      if (!h && orc.n > 0){ orc.n--; const j = await yahoo(`/v8/finance/chart/${encodeURIComponent(s)}?range=1mo&interval=1d`); const r = j.chart.result[0], ts = r.timestamp || [], cl = ((r.indicators.quote || [{}])[0] || {}).close || []; h = ts.map((t, i) => [diaDeTs(t), cl[i]]).filter(x => x[1] != null); await cachePut(env, ck, h); }
+      if (h){ const lim = addDia(lisboaDia(), -7); const b = [...h].reverse().find(x => x[0] <= lim); semana = b ? b[1] : null; }
+    }catch(e){}
+    const p = (L[s] || {}).preco, valor = paraEUR(q[s] * p, moedas[s], fx);
+    pos.push({sym:s, nome:((st.ativos || []).find(a => a.id === s) || {}).nome || s, valor, varSemana:semana && p ? p / semana - 1 : null, varDia:(L[s] || {}).anterior ? p / L[s].anterior - 1 : null});
+  }
+  const tot = pos.reduce((a, p) => a + (isFinite(p.valor) ? p.valor : 0), 0);
+  const ini = pos.reduce((a, p) => a + (isFinite(p.valor) && p.varSemana != null ? p.valor / (1 + p.varSemana) : (isFinite(p.valor) ? p.valor : 0)), 0);
+  const varSem = ini > 0 ? tot / ini - 1 : 0;
+  const dados = pos.filter(p => isFinite(p.valor)).sort((a, b) => b.valor - a.valor).map(p => ({ativo:p.sym, nome:p.nome, pesoPct:+(p.valor / tot * 100).toFixed(1), semanaPct:p.varSemana != null ? +(p.varSemana * 100).toFixed(1) : null}));
+  let ia = null, fontes = [];
+  if (env.ANTHROPIC_API_KEY){
+    try{
+      const system = `Escreves o resumo semanal da carteira de investimentos de um investidor particular em Portugal (português europeu, tom claro e próximo, sem jargão).
+Recebes as posições com peso e variação da semana. Pesquisa as notícias mais relevantes da semana sobre as maiores posições (resultados, guidance, decisões de bancos centrais que as afetem).
+Responde APENAS com JSON: {"titulo":"frase curta (máx. 70 caracteres) para a notificação","resumo":"3-4 frases com o essencial da semana","destaques":[{"ativo":"","texto":"1 frase: o que aconteceu e porquê"}],"atencao":["ponto curto a vigiar na próxima semana (ex.: resultados de X na quinta)"]}
+Regras: 3 a 5 destaques; usa só factos que encontraste; não dês ordens de compra ou venda.`;
+      const r = await claude(env, system, `Semana até ${lisboaDia()}. Valor da carteira: ${eurTxt(tot)} (${pctTxt(varSem)} na semana).\nPosições (JSON): ${JSON.stringify(dados).slice(0, 6000)}`, {maxTokens:2500, searches:3});
+      ia = r.out; fontes = r.fontes.slice(0, 8);
+    }catch(e){ ia = null; }
+  }
+  const melhor = dados.filter(d => d.semanaPct != null).sort((a, b) => b.semanaPct - a.semanaPct);
+  const res = {id:lisboaDia(), upd:Date.now(), quando:Date.now(), valor:Math.round(tot * 100) / 100, varSemana:varSem, variacaoEUR:Math.round((tot - ini) * 100) / 100,
+    melhor:melhor[0] || null, pior:melhor.length > 1 ? melhor[melhor.length - 1] : null,
+    titulo:ia && ia.titulo ? String(ia.titulo).slice(0, 90) : `Carteira ${pctTxt(varSem)} esta semana`,
+    resumo:ia ? String(ia.resumo || "") : "", destaques:ia && Array.isArray(ia.destaques) ? ia.destaques.slice(0, 6) : [], atencao:ia && Array.isArray(ia.atencao) ? ia.atencao.slice(0, 5) : [], fontes};
+  st.resumos = (st.resumos || []).filter(x => x.id !== res.id).concat(res).sort((a, b) => String(a.id).localeCompare(String(b.id))).slice(-8);
+  await putVal(env, key, st);
+  return res;
+}
+
+/* ============================================================
+   NOTIFICAÇÕES: Web Push (RFC 8291 + VAPID RFC 8292)
+   ============================================================ */
+const enc = new TextEncoder();
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = s => { s = String(s).replace(/-/g, "+").replace(/_/g, "/"); const b = atob(s + "===".slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+const cat = (...a) => { const n = a.reduce((x, y) => x + y.length, 0), o = new Uint8Array(n); let i = 0; a.forEach(x => { o.set(x, i); i += x.length; }); return o; };
+async function vapid(env){
+  let v = await getVal(env, "sys:vapid");
+  if (!v){
+    const kp = await crypto.subtle.generateKey({name:"ECDSA", namedCurve:"P-256"}, true, ["sign", "verify"]);
+    v = {priv:await crypto.subtle.exportKey("jwk", kp.privateKey), pub:b64u(await crypto.subtle.exportKey("raw", kp.publicKey))};
+    await putVal(env, "sys:vapid", v);
+  }
+  return v;
+}
+async function vapidAuth(env, endpoint){
+  const v = await vapid(env), aud = new URL(endpoint).origin;
+  const h = b64u(enc.encode(JSON.stringify({typ:"JWT", alg:"ES256"})));
+  const c = b64u(enc.encode(JSON.stringify({aud, exp:Math.floor(Date.now() / 1000) + 12 * 3600, sub:"mailto:carteira-app@users.noreply.github.com"})));
+  const key = await crypto.subtle.importKey("jwk", v.priv, {name:"ECDSA", namedCurve:"P-256"}, false, ["sign"]);
+  const sig = await crypto.subtle.sign({name:"ECDSA", hash:"SHA-256"}, key, enc.encode(h + "." + c));
+  return `vapid t=${h}.${c}.${b64u(sig)}, k=${v.pub}`;
+}
+async function hkdf(salt, ikm, info, len){
+  const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({name:"HKDF", hash:"SHA-256", salt, info}, k, len * 8));
+}
+async function cifrar(sub, texto){
+  const ua = unb64u(sub.keys.p256dh), auth = unb64u(sub.keys.auth);
+  const as = await crypto.subtle.generateKey({name:"ECDH", namedCurve:"P-256"}, true, ["deriveBits"]);
+  const asPub = new Uint8Array(await crypto.subtle.exportKey("raw", as.publicKey));
+  const uaKey = await crypto.subtle.importKey("raw", ua, {name:"ECDH", namedCurve:"P-256"}, false, []);
+  const ecdh = new Uint8Array(await crypto.subtle.deriveBits({name:"ECDH", public:uaKey}, as.privateKey, 256));
+  const ikm = await hkdf(auth, ecdh, cat(enc.encode("WebPush: info\0"), ua, asPub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, enc.encode("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = await hkdf(salt, ikm, enc.encode("Content-Encoding: nonce\0"), 12);
+  const k = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM", iv:nonce}, k, cat(enc.encode(texto), new Uint8Array([2]))));
+  return cat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([asPub.length]), asPub, ct);
+}
+async function enviarPush(env, sub, msg){
+  const body = await cifrar(sub, JSON.stringify(msg));
+  const r = await fetch(sub.endpoint, {method:"POST", headers:{"Authorization":await vapidAuth(env, sub.endpoint), "Content-Encoding":"aes128gcm", "Content-Type":"application/octet-stream", "TTL":"43200", "Urgency":"high"}, body});
+  if (r.status === 404 || r.status === 410){ await env.DB.prepare("DELETE FROM subs WHERE endpoint = ?").bind(sub.endpoint).run(); return false; }
+  if (!r.ok) throw new Error(`Serviço de notificações respondeu ${r.status}: ${(await r.text().catch(() => "")).slice(0, 160)}`);
+  return true;
+}
+async function subsDe(env, k){ await ensure(env); const r = await env.DB.prepare("SELECT sub FROM subs WHERE k = ?").bind(k).all(); return (r.results || []).map(x => JSON.parse(x.sub)); }
+async function enviarTodos(env, k, msg){
+  let n = 0, e1 = null;
+  for (const s of await subsDe(env, k)){ try{ if (await enviarPush(env, s, msg)) n++; }catch(e){ e1 = e; } }
+  if (!n && e1) throw e1;
+  return n;
+}
+
+/* ============================================================
+   TAREFA PERIÓDICA (cron de 15 em 15 min)
+   ============================================================ */
+function lisboa(d = new Date()){
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {timeZone:"Europe/Lisbon", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", weekday:"short", hourCycle:"h23"}).formatToParts(d).map(x => [x.type, x.value]));
+  return {dia:`${p.year}-${p.month}-${p.day}`, min:(+p.hour) * 60 + (+p.minute), dow:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(p.weekday)};
+}
+const NOTIF_DEF = {variacao:5, alertas:true, dividendos:true, resultados:true, resumo:true, resumoHora:"19:00"};
+const dmTxt = d => d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : "";
+async function avisosDe(env, k, st, L, orc){
+  const cfg = Object.assign({}, NOTIF_DEF, (st.cfg || {}).notif || {}), out = [], mud = {alertas:false};
+  const q = quantidades(st);
+  const alertas = (st.alertas || []).filter(a => a && !a.del && !a.disparado && a.sym && +a.preco > 0);
+  const syms = [...new Set(Object.keys(q).concat(cfg.alertas ? alertas.map(a => a.sym) : []))];
+  if (!syms.length) return {out, mud};
+  const moedas = {}; for (const s of Object.keys(q)) moedas[s] = await moedaDe(env, s);
+  const precisaFx = [...new Set(Object.values(moedas).map(m => m === "GBp" || m === "GBX" ? "GBP" : m).filter(m => m && m !== "EUR"))];
+  const P = await precosAgora(env, syms.concat(precisaFx.map(c => `${c}EUR=X`)), orc);
+  const fx = {}; precisaFx.forEach(c => fx[c] = (P[`${c}EUR=X`] || {}).preco);
+  const nome = s => ((st.ativos || []).find(a => a.id === s) || {}).nome || s;
+  /* alertas de preço */
+  if (cfg.alertas) alertas.forEach(a => {
+    const p = (P[a.sym] || {}).preco; if (!(p > 0)) return;
+    if ((a.cond === "abaixo" && p <= +a.preco) || (a.cond !== "abaixo" && p >= +a.preco)){
+      out.push({id:`al:${a.id}`, title:`${a.sym} ${a.cond === "abaixo" ? "desceu abaixo de" : "subiu acima de"} ${(+a.preco).toLocaleString("pt-PT")}`, body:`Está agora a ${p.toLocaleString("pt-PT", {maximumFractionDigits:2})}. ${a.nota ? a.nota : nome(a.sym)}`, url:`./#analise/${encodeURIComponent(a.sym)}`, tag:"alerta-" + a.id});
+      a.disparado = true; a.quando = Date.now(); a.upd = Date.now(); mud.alertas = true;
+    }
+  });
+  /* variação forte do dia nas posições */
+  if (+cfg.variacao > 0 && L.min >= 8 * 60 && L.min < 23 * 60) Object.keys(q).forEach(s => {
+    const x = P[s]; if (!x || !(x.anterior > 0) || !(x.preco > 0)) return;
+    const v = x.preco / x.anterior - 1;
+    if (Math.abs(v) * 100 >= +cfg.variacao){
+      const efeito = paraEUR(q[s] * (x.preco - x.anterior), moedas[s], fx);
+      out.push({id:`vr:${s}:${L.dia}:${v > 0 ? "s" : "d"}`, title:`${s} ${v > 0 ? "sobe" : "desce"} ${pctTxt(v).replace("+", "").replace("−", "")} hoje`, body:`${nome(s)}${isFinite(efeito) ? ` · na tua posição: ${efeito >= 0 ? "+" : "−"}${eurTxt(Math.abs(efeito))}` : ""}${x.sessao ? ` (${x.sessao})` : ""}`, url:`./#analise/${encodeURIComponent(s)}`, tag:"var-" + s});
+    }
+  });
+  /* dividendos e resultados (uma vez por dia, de manhã até à noite) */
+  if ((cfg.dividendos || cfg.resultados) && L.min >= 8 * 60 && L.min < 22 * 60){
+    for (const s of Object.keys(q)){
+      let c = null; try{ c = await calInfo(env, s, orc); }catch(e){}
+      if (!c) continue;
+      if (cfg.dividendos){
+        const qtd = q[s], vEUR = v => paraEUR(qtd * v, c.moeda || moedas[s], fx);
+        /* data ex hoje (anunciada): o dividendo fica garantido */
+        c.prox.filter(p => !p.estimado && p.ex === L.dia).forEach(p => { const e = vEUR(p.valor); out.push({id:`dx:${s}:${p.ex}`, title:`Dividendo de ${s} garantido`, body:`Hoje é a data ex-dividendo: vais receber cerca de ${isFinite(e) ? eurTxt(e) : "?"} (bruto)${p.pag ? `, pagos a ${dmTxt(p.pag)}` : ""}.`, url:"./#dividendos", tag:"div-" + s}); });
+        /* dia do pagamento */
+        c.prox.filter(p => p.pag === L.dia).forEach(p => { const e = vEUR(p.valor); out.push({id:`dp:${s}:${p.pag}`, title:`Dividendo de ${s} a entrar hoje`, body:`Cerca de ${isFinite(e) ? eurTxt(e) : "?"} brutos (antes de impostos). Regista o valor líquido na app quando entrar.`, url:"./#dividendos", tag:"div-" + s}); });
+        /* sem calendário: dividendo novo no histórico (últimos 4 dias) */
+        if (!c.comCalendario) c.divs.filter(d => d[0] >= addDia(L.dia, -4) && d[0] <= L.dia).forEach(d => { const e = vEUR(d[1]); out.push({id:`dh:${s}:${d[0]}`, title:`${s} paga dividendo`, body:`${d[1].toLocaleString("pt-PT")} ${c.moeda} por ação (data ex ${dmTxt(d[0])}): cerca de ${isFinite(e) ? eurTxt(e) : "?"} brutos para ti.`, url:"./#dividendos", tag:"div-" + s}); });
+      }
+      if (cfg.resultados && c.resultados && c.resultados.length){
+        const amanha = addDia(L.dia, 1);
+        c.resultados.filter(d => d === amanha || d === L.dia).forEach(d => out.push({id:`er:${s}:${d}:${d === L.dia ? 0 : 1}`, title:`${s} apresenta resultados ${d === L.dia ? "hoje" : "amanhã"}`, body:`${nome(s)}: costuma haver mais variação no preço nesse dia.`, url:`./#analise/${encodeURIComponent(s)}`, tag:"res-" + s}));
+      }
+    }
+  }
+  return {out, mud};
+}
+async function tick(env){
+  if (!env.DB) return;
+  await ensure(env);
+  const L = lisboa();
+  const subs = (await env.DB.prepare("SELECT k, sub FROM subs").all()).results || [];
+  const porK = {}; subs.forEach(s => (porK[s.k] = porK[s.k] || []).push(JSON.parse(s.sub)));
+  const orc = {n:40};
+  for (const k of Object.keys(porK)){
+    const st = await getVal(env, k); if (!st) continue;
+    const cfg = Object.assign({}, NOTIF_DEF, (st.cfg || {}).notif || {});
+    /* resumo de domingo */
+    const [hh, mm] = String(cfg.resumoHora || "19:00").split(":").map(Number), alvo = (hh || 19) * 60 + (mm || 0);
+    if (cfg.resumo && L.dow === 0 && L.min >= alvo && L.min < alvo + 180){
+      const id = k.slice(3, 15) + ":rs:" + L.dia;
+      if (!(await env.DB.prepare("SELECT 1 FROM enviados WHERE id = ?").bind(id).first())){
+        await env.DB.prepare("INSERT OR IGNORE INTO enviados (id, t) VALUES (?, ?)").bind(id, Date.now()).run();
+        try{
+          const r = await resumoSemanal(env, k, st, true);
+          for (const s of porK[k]){ try{ await enviarPush(env, s, {title:r.titulo, body:`${eurTxt(r.valor)} · ${pctTxt(r.varSemana)} (${r.variacaoEUR >= 0 ? "+" : "−"}${eurTxt(Math.abs(r.variacaoEUR))}) esta semana. Toca para ler o resumo.`, url:"./#sugestoes", tag:"resumo"}); }catch(e){} }
+        }catch(e){}
+        continue;   /* o resumo usa os pedidos todos deste ciclo */
+      }
+    }
+    let r;
+    try{ r = await avisosDe(env, k, st, L, orc); }catch(e){ continue; }
+    for (const n of r.out){
+      const id = k.slice(3, 15) + ":" + n.id;
+      if (await env.DB.prepare("SELECT 1 FROM enviados WHERE id = ?").bind(id).first()) continue;
+      await env.DB.prepare("INSERT OR IGNORE INTO enviados (id, t) VALUES (?, ?)").bind(id, Date.now()).run();
+      for (const s of porK[k]){ try{ await enviarPush(env, s, n); }catch(e){} }
+    }
+    if (r.mud.alertas) await putVal(env, k, st);
+  }
+  if (L.min < 15) await env.DB.prepare("DELETE FROM enviados WHERE t < ?").bind(Date.now() - 60 * 864e5).run();
+}
+
 /* ---------- pedidos ---------- */
 export default {
+  async scheduled(event, env, ctx){ ctx.waitUntil(tick(env)); },
   async fetch(req, env){
     const url = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null, {status:204, headers:CORS});
     try{
-      if (req.method === "GET") return json({ok:true, app:"carteira-api", versao:1, ia:!!env.ANTHROPIC_API_KEY, base:env.DB ? "D1" : "nenhuma"});
+      if (req.method === "GET") return json({ok:true, app:"carteira-api", versao:2, ia:!!env.ANTHROPIC_API_KEY, base:env.DB ? "D1" : "nenhuma"});
       if (req.method !== "POST") return json({error:"Método não suportado."}, 405);
       const body = await req.json().catch(() => null);
       if (!body) return json({error:"Pedido inválido."}, 400);
@@ -504,6 +846,25 @@ export default {
         return json(r);
       }
       if (p === "/api/importar") return json(await importar(env, key, body));
+      if (p === "/api/calendario") return json(await calendario(env, body));
+      if (p === "/api/composicao") return json(await composicao(env, key, body));
+      if (p === "/api/resumo") return json(await resumoSemanal(env, key, await getVal(env, key), false));
+      if (p.startsWith("/api/push/")){
+        await ensure(env);
+        const acao = p.slice(10);
+        if (acao === "chave") return json({chave:(await vapid(env)).pub});
+        if (acao === "registar"){
+          const sub = body.sub || {};
+          if (!/^https:\/\//.test(sub.endpoint || "") || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return json({error:"Subscrição inválida."}, 400);
+          await env.DB.prepare("INSERT INTO subs (endpoint, k, sub, nome, upd) VALUES (?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET k = excluded.k, sub = excluded.sub, nome = excluded.nome, upd = excluded.upd").bind(sub.endpoint, key, JSON.stringify({endpoint:sub.endpoint, keys:{p256dh:sub.keys.p256dh, auth:sub.keys.auth}}), String(body.nome || "").slice(0, 40), Date.now()).run();
+          return json({ok:true});
+        }
+        if (acao === "remover"){ await env.DB.prepare("DELETE FROM subs WHERE endpoint = ? AND k = ?").bind(String(body.endpoint || ""), key).run(); return json({ok:true}); }
+        if (acao === "estado"){ const r = await env.DB.prepare("SELECT nome, upd FROM subs WHERE k = ?").bind(key).all(); return json({aparelhos:r.results || []}); }
+        if (acao === "teste"){ const n = await enviarTodos(env, key, {title:"Carteira · notificações ligadas", body:"É assim que vão aparecer os alertas de preço, os dividendos e o resumo de domingo.", url:"./#painel", tag:"teste"}); return json({ok:true, enviados:n}); }
+        if (acao === "verificar"){ const st = await getVal(env, key); const r = await avisosDe(env, key, st, lisboa(), {n:30}); return json({avisos:r.out}); }
+        return json({error:"Endereço desconhecido."}, 404);
+      }
       return json({error:"Endereço desconhecido."}, 404);
     }catch(e){
       return json({error:String(e.message || e)}, e.status || 500);

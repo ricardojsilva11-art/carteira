@@ -72,6 +72,8 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .kpi{display:flex;flex-direction:column;gap:6px}
 .kpi .v{font-size:21px;font-weight:600}
 .f2{flex:2 1 520px}.f1{flex:1 1 300px}
+.kpis4{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+.kpis4>div{display:flex;flex-direction:column;gap:3px}.kpis4 .lab{font-size:12px;color:var(--txt3)}.kpis4 .v{font-size:18px;font-weight:600}
 .btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line2);background:transparent;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap}
 .btn:hover{background:var(--card2)}
 .btn.pri{background:var(--acc);color:var(--acc-ink);border-color:transparent;font-weight:600}
@@ -161,6 +163,8 @@ dialog::backdrop{background:rgba(5,10,15,.55)}
   <symbol id="i-def" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
   <symbol id="i-div" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.4a3.5 3.5 0 0 0-3-1.4c-1.7 0-3 .9-3 2.2 0 3 6 1.6 6 4.6 0 1.3-1.3 2.2-3 2.2a3.6 3.6 0 0 1-3.2-1.6"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
   <symbol id="i-sync" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
@@ -192,7 +196,7 @@ const SETORES = ["Tecnologia","Saúde","Financeiro","Consumo cíclico","Consumo 
 const COR_SETOR = {"Tecnologia":"#6EA8FE","Saúde":"#F27E9B","Financeiro":"#4FC1B0","Consumo cíclico":"#E8D36A","Consumo básico":"#A3D977","Industrial":"#8FA3BF","Energia":"#E0704F","Materiais":"#C9A27E","Imobiliário":"#B48CF2","Comunicações":"#5FD3E8","Utilities":"#7FC8A9","Cripto":"#F7931A","Obrigações":"#9DB4FF","Outros":"#6B7785"};
 const TIPOS = ["Ação","ETF","REIT","Cripto","Obrigações","Fundo"];
 const COR_TIPO = {"Ação":"#4FC1B0","ETF":"#6EA8FE","REIT":"#B48CF2","Cripto":"#F7931A","Obrigações":"#9DB4FF","Fundo":"#E8D36A"};
-const VIEWS = [["painel","Painel","i-painel"],["posicoes","Posições","i-pos"],["dividendos","Dividendos","i-div"],["exposicao","Exposição","i-exp"],["analise","Análise","i-an"],["sugestoes","Sugestões IA","i-ia"],["definicoes","Definições","i-def"]];
+const VIEWS = [["painel","Painel","i-painel"],["posicoes","Posições","i-pos"],["dividendos","Dividendos","i-div"],["exposicao","Exposição e plano","i-exp"],["analise","Análise","i-an"],["sugestoes","Sugestões IA","i-ia"],["definicoes","Definições","i-def"]];
 
 /* ---------- utilitários ---------- */
 const $ = s => document.querySelector(s);
@@ -225,10 +229,20 @@ let P = store.get("cart.precos", {precos:{}, fx:{EUR:{preco:1, hist:[]}}, quando
 let syncState = {ok:null, msg:"", quando:0};
 const vivos = c => (S[c] || []).filter(x => x && !x.del);
 const ativo = sym => vivos("ativos").find(a => a.id === sym);
+/* corretora: «origem» do movimento (XTB, Revolut…); sem origem = «Manual» */
+const corretoraDe = o => o.origem || "Manual";
+let FILTRO = store.get("cart.filtro", "");
+const opsF = () => vivos("ops").filter(o => !FILTRO || corretoraDe(o) === FILTRO);
+const corretoras = () => [...new Set(vivos("ops").map(corretoraDe))].sort();
+function setFiltro(c){ FILTRO = c; store.set("cart.filtro", c); render(); }
+function chipsCorretora(){
+  const cs = corretoras(); if (cs.length < 2) return "";
+  return `<div class="chips" role="group" aria-label="Corretora" style="margin:-6px 0 16px">${[["", "Todas"]].concat(cs.map(c => [c, c])).map(([v, t]) => `<button type="button" class="chip ${FILTRO === v ? "on" : ""}" onclick="setFiltro('${esc(v)}')">${esc(t)}</button>`).join("")}</div>`;
+}
 
 function save(){ store.set("cart.state", S); scheduleSync(); }
 function touch(o){ o.upd = Date.now(); return o; }
-function upsert(col, obj){ touch(obj); const i = S[col].findIndex(x => x.id === obj.id); if (i >= 0) S[col][i] = Object.assign({}, S[col][i], obj); else S[col].push(obj); save(); }
+function upsert(col, obj){ touch(obj); if (!Array.isArray(S[col])) S[col] = []; const i = S[col].findIndex(x => x.id === obj.id); if (i >= 0) S[col][i] = Object.assign({}, S[col][i], obj); else S[col].push(obj); save(); }
 
 /* ---------- tema ---------- */
 function aplicarTema(){
@@ -285,7 +299,7 @@ function rangeNecessario(){
   return anos <= .9 ? "1y" : anos <= 1.9 ? "2y" : anos <= 4.8 ? "5y" : anos <= 9.6 ? "10y" : "max";
 }
 async function atualizarPrecos(forcar){
-  const syms = [...new Set(vivos("ops").map(o => o.sym))];
+  const syms = [...new Set(vivos("ops").map(o => o.sym).concat(benchSym() ? [benchSym()] : []))];
   if (!syms.length || loadingPrecos) return;
   const range = rangeNecessario();
   if (!forcar && P.range === range && Date.now() - P.quando < 4 * 60e3 && syms.every(s => P.precos[s])) return;
@@ -294,6 +308,7 @@ async function atualizarPrecos(forcar){
     const j = await api("/api/precos", {symbols:syms, range});
     P = {precos:Object.assign({}, P.precos, j.precos), fx:Object.assign({}, P.fx, j.fx), quando:j.quando || Date.now(), range};
     store.set("cart.precos", P);
+    clearTimeout(window._diaT); window._diaT = setTimeout(atualizarDia, 1500);
     const errs = Object.entries(j.erros || {});
     if (errs.length) toast("Sem preço para: " + errs.map(e => e[0]).join(", "), 4500);
     renderBg();
@@ -308,7 +323,7 @@ function precoEUR(sym){ const p = P.precos[sym]; if (!p) return NaN; return p.pr
 /* ---------- cálculos da carteira ---------- */
 function posicoes(){
   const by = {};
-  vivos("ops").slice().sort((a, b) => (a.data || "").localeCompare(b.data || "") || (a.criado || 0) - (b.criado || 0)).forEach(o => {
+  opsF().slice().sort((a, b) => (a.data || "").localeCompare(b.data || "") || (a.criado || 0) - (b.criado || 0)).forEach(o => {
     const p = by[o.sym] = by[o.sym] || {sym:o.sym, qtd:0, custo:0, realizado:0, divRec:0, ops:[]};
     const q = +o.qtd || 0, t = +o.total || 0;
     if (o.tipo === "dividendo"){ p.divRec += t; p.ops.push(o); return; }
@@ -338,7 +353,7 @@ function totais(ps){
   const dia = ab.reduce((s, p) => s + (p.temPreco ? p.varDia : 0), 0);
   const divRec = ps.reduce((s, p) => s + p.divRec, 0), divPrev = ab.reduce((s, p) => s + p.divPrev, 0);
   const lim = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
-  const div12 = vivos("ops").filter(o => o.tipo === "dividendo" && o.data >= lim).reduce((s, o) => s + (+o.total || 0), 0);
+  const div12 = opsF().filter(o => o.tipo === "dividendo" && o.data >= lim).reduce((s, o) => s + (+o.total || 0), 0);
   return {divRec, divPrev, div12, valor, custo, ganho:valor - custo, rend:custo > 0 ? (valor - custo) / custo : 0, realizado, dia, diaPct:valor - dia > 0 ? dia / (valor - dia) : 0, n:ab.length};
 }
 function exposicao(ps){
@@ -369,7 +384,7 @@ function dps12m(sym){
 }
 function qtdEm(sym, dia){ /* unidades detidas antes da data ex-dividendo */
   let q = 0;
-  vivos("ops").filter(o => o.sym === sym && o.data < dia && o.tipo !== "dividendo").sort((a, b) => a.data.localeCompare(b.data)).forEach(o => { q = o.tipo === "venda" ? Math.max(0, q - (+o.qtd || 0)) : q + (+o.qtd || 0); });
+  opsF().filter(o => o.sym === sym && o.data < dia && o.tipo !== "dividendo").sort((a, b) => a.data.localeCompare(b.data)).forEach(o => { q = o.tipo === "venda" ? Math.max(0, q - (+o.qtd || 0)) : q + (+o.qtd || 0); });
   return q;
 }
 function fxEm(moeda, dia){
@@ -379,11 +394,11 @@ function fxEm(moeda, dia){
 }
 /* pagamentos: registados (movimentos «dividendo») + estimados a partir do histórico do Yahoo */
 function pagamentos(){
-  const reg = vivos("ops").filter(o => o.tipo === "dividendo").map(o => ({id:o.id, sym:o.sym, data:o.data, liquido:+o.total || 0, imposto:+o.imposto || 0, bruto:o.bruto || null, registado:true}));
+  const reg = opsF().filter(o => o.tipo === "dividendo").map(o => ({id:o.id, sym:o.sym, data:o.data, liquido:+o.total || 0, imposto:+o.imposto || 0, bruto:o.bruto || null, registado:true}));
   const est = [];
-  [...new Set(vivos("ops").map(o => o.sym))].forEach(sym => {
+  [...new Set(opsF().map(o => o.sym))].forEach(sym => {
     const p = P.precos[sym]; if (!p || !p.divs) return;
-    const primeira = vivos("ops").filter(o => o.sym === sym && o.tipo !== "dividendo").map(o => o.data).sort()[0];
+    const primeira = opsF().filter(o => o.sym === sym && o.tipo !== "dividendo").map(o => o.data).sort()[0];
     /* cada dividendo registado corresponde a um só pagamento: o mais recente com data ex até 60 dias antes */
     const evs = p.divs.filter(([dia]) => primeira && dia > primeira).map(([dia, amt]) => ({dia, amt, usado:false}));
     reg.filter(r => r.sym === sym).sort((x, y) => x.data.localeCompare(y.data)).forEach(r => {
@@ -399,32 +414,33 @@ function pagamentos(){
   return reg.concat(est).sort((a, b) => b.data.localeCompare(a.data));
 }
 
-/* evolução diária: valor da carteira vs. valor investido */
+/* evolução diária: [dia, valor, investido, entradas, vendas, dividendos] */
 function historico(){
-  const ops = vivos("ops").slice().sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  const todas = opsF().slice().sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  const ops = todas.filter(o => o.tipo !== "dividendo"), divs = todas.filter(o => o.tipo === "dividendo");
   if (!ops.length) return [];
   const ini = ops[0].data, syms = [...new Set(ops.map(o => o.sym))];
   const dias = new Set();
   syms.forEach(s => ((P.precos[s] || {}).hist || []).forEach(h => { if (h[0] >= ini) dias.add(h[0]); }));
-  const lista = [...dias].sort(); if (!lista.length) return [];
-  const idx = {}; syms.forEach(s => idx[s] = 0);
-  const fxIdx = {}, fxLast = {}, last = {};
-  const q = {}, custo = {};
-  let oi = 0;
+  ops.forEach(o => dias.add(o.data));
+  const lista = [...dias].filter(d => d <= hoje()).sort(); if (!lista.length) return [];
+  const idx = {}, last = {}, fxIdx = {}, fxLast = {}, q = {}, custo = {};
+  let oi = 0, di = 0;
   const out = [];
   for (const d of lista){
+    let entrou = 0, vendas = 0, dv = 0;
     while (oi < ops.length && ops[oi].data <= d){
       const o = ops[oi++], s = o.sym, qq = +o.qtd || 0, t = +o.total || 0;
       q[s] = q[s] || 0; custo[s] = custo[s] || 0;
-      if (o.tipo === "dividendo") continue;
-      if (o.tipo === "venda"){ const m = q[s] > 0 ? custo[s] / q[s] : 0, qv = Math.min(qq, q[s]); custo[s] -= m * qv; q[s] -= qv; }
-      else { q[s] += qq; custo[s] += t; }
+      if (o.tipo === "venda"){ const m = q[s] > 0 ? custo[s] / q[s] : 0, qv = Math.min(qq, q[s]); custo[s] -= m * qv; q[s] -= qv; vendas += t; }
+      else { q[s] += qq; custo[s] += t; entrou += t; }
     }
+    while (di < divs.length && divs[di].data <= d){ dv += +divs[di++].total || 0; }
     let v = 0, inv = 0;
     for (const s of syms){
       const p = P.precos[s]; if (!p) continue;
-      const h = p.hist || [];
-      while (idx[s] < h.length && h[idx[s]][0] <= d){ last[s] = h[idx[s]][1]; idx[s]++; }
+      const hh = p.hist || []; idx[s] = idx[s] || 0;
+      while (idx[s] < hh.length && hh[idx[s]][0] <= d){ last[s] = hh[idx[s]][1]; idx[s]++; }
       const c = moedaFx(p.moeda);
       let fx = 1;
       if (c !== "EUR"){
@@ -432,13 +448,50 @@ function historico(){
         while (fxIdx[c] < fh.length && fh[fxIdx[c]][0] <= d){ fxLast[c] = fh[fxIdx[c]][1]; fxIdx[c]++; }
         fx = fxLast[c] || fxAgora(p.moeda);
       }
+      if (d === hoje() && p.preco) last[s] = p.preco;
       const px = last[s] != null ? last[s] : (q[s] ? (custo[s] / q[s]) / (escalaMoeda(p.moeda) * fx) : 0);
       v += (q[s] || 0) * px * escalaMoeda(p.moeda) * fx;
       inv += custo[s] || 0;
     }
-    out.push([d, v, inv]);
+    out.push([d, v, inv, entrou, vendas, dv]);
   }
   return out;
+}
+/* rentabilidade ponderada no tempo (não depende de quando entra o dinheiro) */
+function twr(h){
+  let f = 1;
+  for (let i = 1; i < h.length; i++){ const base = h[i - 1][1] + h[i][3]; if (base > .01) f *= (h[i][1] + h[i][4] + h[i][5]) / base; }
+  return h.length > 1 ? f - 1 : NaN;
+}
+/* «se tivesses posto o mesmo dinheiro, nas mesmas datas, no índice» */
+const BENCH = [["IWDA.AS", "MSCI World"], ["SXR8.DE", "S&P 500"], ["VWCE.DE", "FTSE All-World"], ["", "Nenhum"]];
+const benchSym = () => (S.cfg.bench != null ? S.cfg.bench : "IWDA.AS");
+const benchNome = () => (BENCH.find(b => b[0] === benchSym()) || [, "índice"])[1];
+function simularBench(h){
+  const sym = benchSym(), p = P.precos[sym]; if (!sym || !p || !(p.hist || []).length) return null;
+  const hh = p.hist; let i = 0, ult = null, u = 0; const out = [];
+  for (const x of h){
+    while (i < hh.length && hh[i][0] <= x[0]){ ult = hh[i][1]; i++; }
+    if (x[0] === hoje() && p.preco) ult = p.preco;
+    /* antes do primeiro preço conhecido usa esse primeiro preço (aproximação) */
+    const base = ult != null ? ult : hh[0][1];
+    const px = base * escalaMoeda(p.moeda) * fxEm(p.moeda, x[0]);
+    if (px){ u += x[3] / px; u -= Math.min(u, x[4] / px); }
+    out.push([x[0], u * px, ult != null ? px : null]);
+  }
+  return out;
+}
+/* TIR anual (rentabilidade anualizada do teu dinheiro) */
+function tir(){
+  const fl = opsF().map(o => [o.data, o.tipo === "compra" ? -(+o.total || 0) : +o.total || 0]);
+  const v = totais(posicoes()).valor; if (!fl.length || !(v > 0)) return NaN;
+  fl.push([hoje(), v]);
+  const t0 = new Date(fl.reduce((a, x) => x[0] < a ? x[0] : a, fl[0][0])).getTime();
+  const f = r => fl.reduce((s, [d, c]) => s + c / Math.pow(1 + r, (new Date(d).getTime() - t0) / (365.25 * 864e5)), 0);
+  let lo = -.99, hi = 10; if (f(lo) * f(hi) > 0) return NaN;
+  for (let k = 0; k < 120; k++){ const m = (lo + hi) / 2; if (f(lo) * f(m) <= 0) hi = m; else lo = m; }
+  const anos = (Date.now() - t0) / (365.25 * 864e5);
+  return anos < .25 ? NaN : (lo + hi) / 2;
 }
 
 /* ---------- indicadores técnicos ---------- */
@@ -537,8 +590,8 @@ function vPainel(m){
   const ps = posicoes(), t = totais(ps);
   if (!vivos("ops").length) return semDados(m);
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco).sort((a, b) => b.rend - a.rend);
-  const ex = exposicao(ps), al = alertas(ex), nDup = duplicadosProvaveis().length;
-  m.innerHTML = `${nDup ? `<a class="warn" href="#posicoes" style="display:block;margin:0 0 14px;text-decoration:none">${nDup === 1 ? "Há uma compra que parece repetida" : `Há ${nDup} compras que parecem repetidas`} — o valor da carteira pode estar a mais. Ver em Posições →</a>` : ""}
+  const ex = exposicao(ps), al = alertas(ex), nAv = listaAvisos(ps).length;
+  m.innerHTML = `${chipsCorretora()}${nAv ? `<a class="warn" href="#posicoes" style="display:block;margin:0 0 14px;text-decoration:none">${nAv === 1 ? "Há 1 ponto a rever nos teus dados" : `Há ${nAv} pontos a rever nos teus dados`} (movimentos em falta, repetidos ou por classificar). Ver em Posições →</a>` : ""}
   <div class="head">
     <div style="display:flex;flex-direction:column;gap:6px">
       <span class="muted" style="font-size:14px">Valor da carteira</span>
@@ -562,7 +615,8 @@ function vPainel(m){
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h2 style="margin:0">Evolução da carteira</h2>
       <div class="seg" role="group" aria-label="Período">${["1M","3M","6M","1A","Tudo"].map(p => `<button type="button" class="${periodo === p ? "on" : ""}" onclick="setPeriodo('${p}')">${p}</button>`).join("")}</div></div>
       <div class="chartbox" style="height:260px"><canvas id="cEvol" role="img" aria-label="Gráfico da evolução do valor da carteira e do valor investido"></canvas></div>
-      <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--up)"></span>Valor da carteira</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed var(--txt3)"></span>Valor investido</span><span id="evolVar" class="mono"></span></div>
+      <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--up)"></span>Valor da carteira</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed var(--txt3)"></span>Valor investido</span>${benchSym() ? `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dotted #6EA8FE"></span>Mesmo dinheiro no ${esc(benchNome())}</span>` : ""}<span id="evolVar" class="mono"></span></div>
+      <div id="evolKpi" class="kpis4"></div>
     </div>
     <div class="card f1">
       <h2>Exposição por setor</h2>
@@ -578,6 +632,8 @@ function vPainel(m){
     </div>
     <div class="f1" style="display:flex;flex-direction:column;gap:14px;min-width:0">
       <div class="card"><h2>Por classe de ativo</h2>${barraBloco(ex.tipos, COR_TIPO)}</div>
+      ${porCorretoraBloco()}
+      ${proximoInvBloco(ps)}
       <div class="card" style="border-color:var(--line2)">
         <div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>SUGESTÕES DA IA</div>
         <p style="margin:10px 0;line-height:1.5">${S.sugestoes && S.sugestoes.resumo ? esc(S.sugestoes.resumo) : "Pede à IA ideias para diversificar a carteira, com análise técnica e fundamental dos ativos sugeridos."}</p>
@@ -588,19 +644,47 @@ function vPainel(m){
   desenharEvol();
   donutChart("cSet", ex.setores, COR_SETOR);
 }
+function proximoInvBloco(ps){
+  const al = alvos(); if (!Object.keys(al).length && !DIA.mes) return `<a class="card" href="#exposicao" style="text-decoration:none;color:inherit"><h2>Plano de investimento</h2><p class="muted" style="margin:0;font-size:14px;line-height:1.5">Define a distribuição alvo e a app diz-te onde investir o próximo dinheiro, sem vender nada.</p></a>`;
+  const A = valorPlano(), sug = sugerirCompras(A, al, ps);
+  return `<a class="card" href="#exposicao" style="text-decoration:none;color:inherit"><h2>Próximo investimento · ${eur(A, 0)}</h2>
+    ${DIA.mes ? `<p class="muted" style="margin:-4px 0 8px;font-size:13px">Sugerido a partir do vencimento e dos gastos do mês.</p>` : ""}
+    ${sug.length ? `<ul class="legend">${sug.slice(0, 4).map(([s, v]) => `<li><span class="tk">${esc(s)}</span><span class="mono">${eur(v, 0)}</span></li>`).join("")}</ul>` : `<p class="muted" style="margin:0;font-size:14px">Define os alvos em Exposição e plano.</p>`}</a>`;
+}
+function porCorretoraBloco(){
+  const cs = corretoras(); if (cs.length < 2 || FILTRO) return "";
+  const f0 = FILTRO, linhas = cs.map(c => { FILTRO = c; const t = totais(posicoes()); return [c, t]; }); FILTRO = f0;
+  const tot = linhas.reduce((s, x) => s + x[1].valor, 0) || 1;
+  return `<div class="card"><h2>Por corretora</h2><ul class="legend">${linhas.map(([c, t]) => `<li style="cursor:pointer" onclick="setFiltro('${esc(c)}')"><span><span class="tk">${esc(c)}</span>&nbsp;<span class="sub">${pct(t.valor / tot)}</span></span><span class="mono">${eur(t.valor, 0)} <span class="${tone(t.ganho)}" style="font-size:12px">${pctS(t.rend)}</span></span></li>`).join("")}</ul></div>`;
+}
 function setPeriodo(p){ periodo = p; store.set("cart.periodo", p); render(); }
 function desenharEvol(){
-  let h = historico();
+  const todo = historico(), bt = simularBench(todo);
+  let ini = 0;
   const dias = {"1M":31, "3M":92, "6M":183, "1A":366}[periodo];
-  if (dias && h.length){ const lim = new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10); h = h.filter(x => x[0] >= lim); }
-  const ev = document.getElementById("evolVar");
-  if (h.length > 1 && ev){ const a = h[0], b = h[h.length - 1], g = (b[1] - b[2]) - (a[1] - a[2]); ev.innerHTML = `No período: <span class="${tone(g)}">${eurS(g)}</span>`; }
-  if (!h.length){ const c = document.getElementById("cEvol"); if (c) c.parentElement.innerHTML = `<div class="empty" style="padding:60px 10px">${L.code ? "A carregar o histórico de preços…" : "Liga o servidor nas Definições para veres o histórico."}</div>`; return; }
+  if (dias && todo.length){ const lim = new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10); ini = Math.max(0, todo.findIndex(x => x[0] >= lim)); if (ini > 0) ini--; }
+  const hp = todo.slice(ini), bp = bt ? bt.slice(ini) : null;
+  const ev = document.getElementById("evolVar"), kp = document.getElementById("evolKpi");
+  if (hp.length > 1 && ev){ const a = hp[0], z = hp[hp.length - 1], fl = hp.slice(1).reduce((s, x) => s + x[3] - x[4] - x[5], 0); const g = (z[1] - a[1]) - fl; ev.innerHTML = `No período: <span class="${tone(g)}">${eurS(g)}</span>`; }
+  if (kp && hp.length > 1){
+    const r = twr(hp), bz = bp && bp.filter(x => x[2]), rb = bz && bz.length > 1 ? bz[bz.length - 1][2] / bz[0][2] - 1 : NaN, t = tir();
+    const fim = bt && bt[bt.length - 1] && bt[bt.length - 1][1], val = todo[todo.length - 1][1];
+    kp.innerHTML = `
+      <div><span class="lab">A tua rentabilidade</span><span class="mono v ${tone(r)}">${pctS(r)}</span><span class="sub">no período, sem o efeito das entradas</span></div>
+      ${benchSym() ? `<div><span class="lab">${esc(benchNome())}</span><span class="mono v ${tone(rb)}">${pctS(rb)}</span><span class="sub">${isFinite(r) && isFinite(rb) ? (r >= rb ? "estás à frente por " : "estás atrás por ") + NF1.format(Math.abs(r - rb) * 100) + " p.p." : ""}</span></div>` : ""}
+      <div><span class="lab">TIR anual</span><span class="mono v ${tone(t)}">${isFinite(t) ? pctS(t) : "—"}</span><span class="sub">desde o início, por ano</span></div>
+      ${fim ? `<div><span class="lab">Mesmo dinheiro no ${esc(benchNome())}</span><span class="mono v">${eur(fim, 0)}</span><span class="sub ${tone(val - fim)}">a tua carteira: ${eurS(val - fim, 0)}</span></div>` : ""}`;
+  }
+  if (!hp.length){ const c = document.getElementById("cEvol"); if (c) c.parentElement.innerHTML = `<div class="empty" style="padding:60px 10px">${L.code ? "A carregar o histórico de preços…" : "Liga o servidor nas Definições para veres o histórico."}</div>`; return; }
   const up = cssv("--up");
-  mkChart("cEvol", {type:"line", data:{labels:h.map(x => lblData(x[0])), datasets:[
-    {label:"Valor", data:h.map(x => +x[1].toFixed(2)), borderColor:up, backgroundColor:up + "18", fill:true, borderWidth:2.2, pointRadius:0, tension:.15},
-    {label:"Investido", data:h.map(x => +x[2].toFixed(2)), borderColor:cssv("--txt3"), borderDash:[5, 5], borderWidth:1.5, pointRadius:0, fill:false, stepped:true}
-  ]}, options:baseOpts({plugins:{legend:{display:false}, tooltip:Object.assign(baseOpts().plugins.tooltip, {callbacks:{label:c => ` ${c.dataset.label}: ${eur(c.parsed.y)}`}})}, scales:Object.assign(baseOpts().scales, {y:Object.assign(baseOpts().scales.y, {ticks:{color:cssv("--txt3"), maxTicksLimit:5, callback:v => NF0.format(v) + " €"}})})})});
+  const ds = [
+    {label:"Valor", data:hp.map(x => +x[1].toFixed(2)), borderColor:up, backgroundColor:up + "18", fill:true, borderWidth:2.2, pointRadius:0, tension:.15},
+    {label:"Investido", data:hp.map(x => +x[2].toFixed(2)), borderColor:cssv("--txt3"), borderDash:[5, 5], borderWidth:1.5, pointRadius:0, fill:false, stepped:true}];
+  if (bp && bp.some(x => x[1])) ds.push({label:"Mesmo dinheiro no " + benchNome(), data:bp.map(x => x[1] != null ? +x[1].toFixed(2) : null), borderColor:"#6EA8FE", borderDash:[2, 3], borderWidth:1.8, pointRadius:0, fill:false, spanGaps:true});
+  const o = baseOpts();
+  o.plugins.tooltip.callbacks = {label:c => ` ${c.dataset.label}: ${eur(c.parsed.y)}`};
+  o.scales.y.ticks.callback = v => NF0.format(v) + " €";
+  mkChart("cEvol", {type:"line", data:{labels:hp.map(x => lblData(x[0])), datasets:ds}, options:o});
 }
 function donutBloco(id, itens, cores, max){
   if (!itens.length) return `<p class="muted">Sem dados de preço ainda.</p>`;
@@ -638,8 +722,9 @@ function vPosicoes(m){
   if (!vivos("ops").length) return semDados(m);
   const ps = posicoes(), t = totais(ps);
   const abertas = ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor), fechadas = ps.filter(p => p.qtd <= 0);
-  const ops = vivos("ops").slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-  m.innerHTML = `<div class="head"><h1>Posições</h1><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato</button><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div></div>
+  const ops = opsF().slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  m.innerHTML = `<div class="head"><h1>Posições</h1><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#exposicao"><svg class="i"><use href="#i-exp"/></svg>Exposição e plano</a><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato</button><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div></div>
+  ${chipsCorretora()}
   ${avisosDados(ps)}
   <div class="card" style="margin-bottom:14px">${tabelaPos(abertas, false)}
   <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca numa posição para ver o detalhe, editar setores ou analisar.</p></div>
@@ -658,12 +743,8 @@ function duplicadosProvaveis(){
   return out;
 }
 function avisosDados(ps){
-  const dup = duplicadosProvaveis(), sem = ps.filter(p => p.semCompra);
-  if (!dup.length && !sem.length) return "";
-  return `<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><h2>A rever</h2>
-  ${dup.map(o => `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span><strong>${esc(o.sym)}:</strong> a compra de ${String(o.qtd).replace(".", ",")} unidades de ${dataPT(o.data)} (adicionada à mão) parece repetir uma compra importada do extrato. Se for a mesma, apaga-a.</span><button class="btn sm" onclick="abrirOp('${o.id}')">Ver e apagar</button></div>`).join("")}
-  ${sem.map(p => `<div class="warn"><strong>${esc(p.sym)}:</strong> ${p.semCompra.map(x => `venda de ${String(x.qtd).replace(".", ",")} unidades em ${dataPT(x.data)}`).join(", ")} sem compra registada antes. Falta o extrato com essa compra; até lá, o ganho dessa venda não entra nas contas.</div>`).join("")}
-  </div>`;
+  const l = listaAvisos(ps); if (!l.length) return "";
+  return `<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><h2>A rever (${l.length})</h2>${l.map(x => `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 300px">${x.txt}</span>${x.btn || ""}</div>`).join("")}</div>`;
 }
 function verAtivo(sym){
   const p = posicoes().find(x => x.sym === sym); if (!p) return;
@@ -709,6 +790,7 @@ function abrirOp(id, pre, tipoIni){
     <label class="f" id="oMedioL">Preço médio por unidade<input class="in mono" id="oMedio" disabled value=""></label>
     <label class="f hide" id="oImpL">Imposto retido em euros (opcional)<input class="in mono" id="oImp" inputmode="decimal" placeholder="Ex.: 4,20" value="${o && o.imposto ? String(o.imposto).replace(".", ",") : ""}"></label>
   </div>
+  <label class="f">Corretora<select class="in" id="oCor">${[...new Set(["XTB", "Revolut", "Degiro", "Trading 212", "Banco"].concat(corretoras()).concat(o && o.origem ? [o.origem] : []))].filter(c => c !== "Manual").map(c => `<option ${(o ? o.origem : (FILTRO && FILTRO !== "Manual" ? FILTRO : store.get("cart.ultCor", "XTB"))) === c ? "selected" : ""}>${esc(c)}</option>`).join("")}<option value="" ${o && !o.origem ? "selected" : ""}>Sem corretora</option></select></label>
   <label class="f">Nota (opcional)<input class="in" id="oNota" value="${o ? esc(o.nota || "") : ""}" placeholder="Ex.: corretora, estratégia"></label>
   <div class="acts">${o ? `<button class="btn" style="margin-right:auto;color:var(--down)" onclick="apagarOp('${o.id}')">Apagar</button>` : ""}<button class="btn" onclick="fecharDlg()">Cancelar</button><button class="btn pri" id="oOk" onclick="guardarOp('${o ? o.id : ""}')">Guardar</button></div>`);
   dlgTipo = o ? o.tipo || "compra" : (tipoIni || "compra"); setOpTipo(dlgTipo); calcMedio();
@@ -751,7 +833,8 @@ async function guardarOp(id){
   if (!data) return toast("Indica a data.");
   if (dlgTipo === "venda"){ const p = posicoes().find(x => x.sym === escolhido.sym), tem = p ? p.qtd + (id ? (+(vivos("ops").find(o => o.id === id) || {}).qtd || 0) : 0) : 0; if (qtd > tem + 1e-9) return toast("Não tens unidades suficientes para esta venda."); }
   const imp = num(($("#oImp") || {}).value);
-  const o = Object.assign({}, id ? vivos("ops").find(x => x.id === id) : {id:uid(), criado:Date.now()}, {sym:escolhido.sym, tipo:dlgTipo, data, qtd:dlgTipo === "dividendo" ? 0 : qtd, total, imposto:dlgTipo === "dividendo" && imp > 0 ? imp : 0, nota:$("#oNota").value.trim()});
+  const o = Object.assign({}, id ? vivos("ops").find(x => x.id === id) : {id:uid(), criado:Date.now()}, {sym:escolhido.sym, tipo:dlgTipo, data, qtd:dlgTipo === "dividendo" ? 0 : qtd, total, imposto:dlgTipo === "dividendo" && imp > 0 ? imp : 0, nota:$("#oNota").value.trim(), origem:$("#oCor").value || undefined});
+  if (o.origem) store.set("cart.ultCor", o.origem); else delete o.origem;
   upsert("ops", o);
   const existe = ativo(sel.sym), novo = !existe || existe.fonte === "pendente";
   if (!existe) upsert("ativos", {id:escolhido.sym, nome:escolhido.nome, tipoY:escolhido.tipoY || "", tipo:escolhido.tipoY === "ETF" ? "ETF" : escolhido.tipoY === "CRYPTOCURRENCY" ? "Cripto" : "Ação", setores:escolhido.tipoY === "CRYPTOCURRENCY" ? {"Cripto":100} : {"Outros":100}, fonte:"pendente"});
@@ -887,17 +970,19 @@ function vDividendos(m){
   const comDiv = ps.filter(p => p.qtd > 0 && p.divPrev > 0).sort((a, b) => b.divPrev - a.divPrev);
   const porEst = pg.filter(x => !x.registado);
   const yieldAtual = t.valor > 0 ? t.divPrev / t.valor : 0, yieldCusto = t.custo > 0 ? t.divPrev / t.custo : 0;
-  m.innerHTML = `<div class="head"><h1>Dividendos</h1><button class="btn pri" onclick="abrirOp(null, null, 'dividendo')"><svg class="i"><use href="#i-plus"/></svg>Registar dividendo</button></div>
+  const fut = previsaoMensal();
+  m.innerHTML = `<div class="head"><h1>Dividendos e calendário</h1><button class="btn pri" onclick="abrirOp(null, null, 'dividendo')"><svg class="i"><use href="#i-plus"/></svg>Registar dividendo</button></div>
   <div class="grid4">
     <div class="card kpi"><span class="lab">Recebido · 12 meses (líquido)</span><span class="v mono">${eur(t.div12)}</span></div>
     <div class="card kpi"><span class="lab">Recebido desde o início</span><span class="v mono">${eur(t.divRec)}</span></div>
     <div class="card kpi"><span class="lab">Previsão próximos 12 meses (bruto)</span><span class="v mono">${eur(t.divPrev)}</span><span class="sub">≈ ${eur(t.divPrev / 12)} por mês</span></div>
     <div class="card kpi"><span class="lab">Rendimento da carteira</span><span class="v mono">${pct(yieldAtual)}</span><span class="sub">sobre o investido: ${pct(yieldCusto)}</span></div>
   </div>
+  ${calendarioBloco()}
   <div class="row">
-    <div class="card f2"><h2>Dividendos por mês · 24 meses</h2>
+    <div class="card f2"><h2>Dividendos por mês · 24 meses e próximos 12</h2>
       <div class="chartbox" style="height:240px"><canvas id="cDiv" role="img" aria-label="Dividendos recebidos e estimados por mês"></canvas></div>
-      <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--up)"></span>Registados (líquido)</span><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--txt3)"></span>Estimados por registar (bruto)</span></div>
+      <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--up)"></span>Registados (líquido)</span><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--txt3)"></span>Estimados por registar (bruto)</span><span style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:#6EA8FE"></span>Previstos (bruto)</span></div>
     </div>
     <div class="card f1"><h2>Quem paga mais</h2>
       ${comDiv.length ? `<ul class="legend">${comDiv.map(p => `<li><span><span class="tk">${esc(p.sym)}</span>&nbsp;<span class="sub">${p.valor > 0 ? pct(p.divPrev / p.valor) : ""}</span></span><span class="mono">${eur(p.divPrev, 0)}/ano</span></li>`).join("")}</ul>` : `<p class="muted">Nenhuma posição pagou dividendos nos últimos 12 meses. Os ETFs de acumulação reinvestem os dividendos, por isso não aparecem aqui.</p>`}
@@ -914,7 +999,8 @@ function vDividendos(m){
   </div>
   <p class="muted" style="font-size:12.5px;margin-top:14px;line-height:1.5">A previsão usa os dividendos pagos nos últimos 12 meses multiplicados pelas unidades que tens hoje, antes de impostos. Em Portugal os dividendos pagam normalmente 28% de IRS, além do imposto retido no país de origem.</p>`;
   const meses = []; const d0 = new Date(); d0.setDate(1);
-  for (let i = 23; i >= 0; i--){ const d = new Date(d0.getFullYear(), d0.getMonth() - i, 1); meses.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")); }
+  for (let i = 23; i >= -12; i--){ const d = new Date(d0.getFullYear(), d0.getMonth() - i, 1); meses.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")); }
+  const mesAtual = hoje().slice(0, 7);
   const reg = meses.map(mm => pg.filter(x => x.registado && x.data.slice(0, 7) === mm).reduce((s, x) => s + x.liquido, 0));
   const es = meses.map(mm => pg.filter(x => !x.registado && x.data.slice(0, 7) === mm).reduce((s, x) => s + x.bruto, 0));
   const MS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -923,8 +1009,336 @@ function vDividendos(m){
   op.plugins.tooltip.callbacks = {label:c => ` ${c.dataset.label}: ${eur(c.parsed.y)}`};
   mkChart("cDiv", {type:"bar", data:{labels:meses.map(mm => MS[+mm.slice(5) - 1] + " " + mm.slice(2, 4)), datasets:[
     {label:"Registados", data:reg.map(v => +v.toFixed(2)), backgroundColor:cssv("--up"), borderRadius:3},
-    {label:"Estimados", data:es.map(v => +v.toFixed(2)), backgroundColor:cssv("--txt3") + "88", borderRadius:3}
+    {label:"Estimados", data:es.map(v => +v.toFixed(2)), backgroundColor:cssv("--txt3") + "88", borderRadius:3},
+    {label:"Previstos", data:meses.map(mm => mm >= mesAtual ? +((fut[mm] || 0).toFixed(2)) : 0), backgroundColor:"#6EA8FE99", borderRadius:3}
   ]}, options:op});
+}
+
+
+/* ---------- EXPOSIÇÃO REAL (por dentro dos ETFs) ---------- */
+const PAIS_SUF = {"":"Estados Unidos", L:"Reino Unido", DE:"Alemanha", AS:"Países Baixos", PA:"França", LS:"Portugal", MC:"Espanha", MI:"Itália", BR:"Bélgica", SW:"Suíça", CO:"Dinamarca", ST:"Suécia", OL:"Noruega", HE:"Finlândia", IR:"Irlanda", VI:"Áustria", TO:"Canadá", T:"Japão", HK:"Hong Kong"};
+const chaveEmpresa = t => String(t || "").toUpperCase().split(".")[0].replace(/-.*/, "").replace(/[^A-Z0-9]/g, "");
+const eFundo = p => ["ETF", "Fundo", "Obrigações"].includes(p.tipo);
+function paisDe(p, a){
+  if (p.tipo === "Cripto") return "Cripto (sem país)";
+  if (a && a.pais) return a.pais;
+  const suf = p.sym.includes(".") ? p.sym.split(".").pop().toUpperCase() : "";
+  return PAIS_SUF[suf] || "Outros";
+}
+function exposicaoReal(ps){
+  const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0) || 1;
+  const emp = {}, paises = {}, semComp = [];
+  const add = (k, nome, campo, v, via) => { const e = emp[k] = emp[k] || {nome, direto:0, etf:0, via:{}}; e[campo] += v; if (via) e.via[via] = (e.via[via] || 0) + v; if (campo === "direto") e.nome = nome; };
+  ab.forEach(p => {
+    const a = ativo(p.sym) || {}, c = a.comp;
+    if (eFundo(p)){
+      if (c && c.top && c.top.length){
+        let soma = 0;
+        c.top.forEach(t => { const k = chaveEmpresa(t.ticker) || chaveEmpresa(t.nome); soma += +t.peso || 0; add(k, t.nome, "etf", p.valor * (+t.peso || 0) / 100, p.sym); });
+        add("~" + p.sym, `Restantes posições do ${p.sym}${c.nPosicoes ? ` (${NF0.format(c.nPosicoes - c.top.length)} empresas)` : ""}`, "etf", p.valor * Math.max(0, 100 - soma) / 100, p.sym);
+      } else { semComp.push(p.sym); add("~" + p.sym, `${p.sym} (composição por ler)`, "etf", p.valor, p.sym); }
+      const pp = c && c.paises && Object.keys(c.paises).length ? c.paises : null;
+      if (pp){ const st = Object.values(pp).reduce((s, v) => s + v, 0) || 100; Object.entries(pp).forEach(([k, v]) => paises[k] = (paises[k] || 0) + p.valor * v / Math.max(st, 100)); if (st < 100) paises["Outros"] = (paises["Outros"] || 0) + p.valor * (100 - st) / 100; }
+      else paises["Por ler (ETFs)"] = (paises["Por ler (ETFs)"] || 0) + p.valor;
+    } else {
+      add(chaveEmpresa(p.sym), p.nome, "direto", p.valor);
+      const k = paisDe(p, a); paises[k] = (paises[k] || 0) + p.valor;
+    }
+  });
+  const lista = Object.entries(emp).map(([k, e]) => Object.assign({k, total:e.direto + e.etf}, e)).sort((a, b) => (a.k[0] === "~") - (b.k[0] === "~") || b.total - a.total);
+  return {empresas:lista, paises:Object.entries(paises).map(([k, v]) => [k, v / tot]).sort((a, b) => b[1] - a[1]), total:tot, semComp};
+}
+let COMP = {a:null, erro:"", tentados:{}};
+async function carregarComposicoes(forcar){
+  if (COMP.a || !L.code) return;
+  const ps = posicoes().filter(p => p.qtd > 0 && eFundo(p));
+  const falta = ps.filter(p => { const a = ativo(p.sym) || {}; return forcar || !a.comp || Date.now() - (a.comp.quando || 0) > 30 * 864e5; }).filter(p => forcar || !COMP.tentados[p.sym]);
+  for (const p of falta){
+    COMP.a = p.sym; COMP.tentados[p.sym] = 1; renderBg();
+    try{
+      const a = ativo(p.sym) || {id:p.sym};
+      const r = await api("/api/composicao", {sym:p.sym, nome:a.nome || p.nome, isin:a.isin || "", forcar:!!forcar}, 300000);
+      const novo = Object.assign({}, a, {id:p.sym, comp:{top:r.top, paises:r.paises, setores:r.setores, nPosicoes:r.nPosicoes, indice:r.indice, data:r.data, quando:r.quando || Date.now()}});
+      if (r.isin && !a.isin) novo.isin = r.isin;
+      if (!a.manual && r.setores && Object.keys(r.setores).length){ novo.setores = r.setores; novo.fonte = "justETF"; }
+      upsert("ativos", novo);
+    }catch(e){ COMP.erro = `${p.sym}: ${e.message}`; }
+  }
+  COMP.a = null; renderBg();
+}
+function exposicaoRealBloco(ps){
+  const r = exposicaoReal(ps), top = r.empresas.filter(e => e.k[0] !== "~").slice(0, 15), resto = r.empresas.filter(e => e.k[0] === "~");
+  const maior = top[0], eua = (r.paises.find(p => p[0] === "Estados Unidos") || [, 0])[1];
+  return `<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><h2 style="margin:0">Exposição real · por dentro dos ETFs</h2>
+    ${COMP.a ? `<span class="status"><span class="spin" aria-hidden="true"></span>&nbsp;A ler a composição do ${esc(COMP.a)} no justETF…</span>` : `<button class="btn sm" onclick="carregarComposicoes(true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar composições</button>`}</div>
+    <p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.5">Soma o que tens diretamente com o que está dentro dos teus ETFs (10 maiores posições de cada um, segundo o justETF).</p>
+    ${COMP.erro ? `<div class="warn" style="margin:0 0 10px">${esc(COMP.erro)}</div>` : ""}
+    ${maior && maior.total / r.total > .1 ? `<div class="warn" style="margin:0 0 10px"><strong>${esc(maior.nome)}</strong> vale ${pct(maior.total / r.total)} da carteira${maior.etf > 0 && maior.direto > 0 ? ` (${pct(maior.direto / r.total)} direto + ${pct(maior.etf / r.total)} pelos ETFs)` : ""}.</div>` : ""}
+    <div class="tbl"><table><thead><tr><th>Empresa</th><th class="r">Direto</th><th class="r">Pelos ETFs</th><th class="r">Total</th><th style="min-width:120px"></th></tr></thead><tbody>
+    ${top.map(e => `<tr><td><span class="tk">${esc(e.nome)}</span>${Object.keys(e.via).length ? `<div class="sub">via ${esc(Object.keys(e.via).join(", "))}</div>` : ""}</td><td class="r mono">${e.direto ? pct(e.direto / r.total) : "—"}</td><td class="r mono muted2">${e.etf ? pct(e.etf / r.total) : "—"}</td><td class="r mono" style="font-weight:600">${pct(e.total / r.total)}</td>
+      <td><div class="bar" style="height:8px"><div style="width:${(e.direto / r.total * 100 / Math.max(.01, top[0].total / r.total)).toFixed(1)}%;background:var(--acc)"></div><div style="width:${(e.etf / r.total * 100 / Math.max(.01, top[0].total / r.total)).toFixed(1)}%;background:#6EA8FE88"></div></div></td></tr>`).join("")}
+    ${resto.map(e => `<tr><td class="muted2">${esc(e.nome)}</td><td></td><td class="r mono muted2">${pct(e.etf / r.total)}</td><td class="r mono muted2">${pct(e.total / r.total)}</td><td></td></tr>`).join("")}
+    </tbody></table></div>
+    <h2 style="margin:16px 0 10px">Países</h2>${barraBloco(r.paises.slice(0, 8), corPaises(r.paises))}
+    ${eua > .7 ? `<div class="warn">${pct(eua)} está em empresas dos Estados Unidos (direto e pelos ETFs).</div>` : ""}
+  </div>`;
+}
+function corPaises(ps){ const pal = ["#6EA8FE","#4FC1B0","#F2A65A","#B48CF2","#F27E9B","#E8D36A","#5FD3E8","#A3D977"], o = {}; ps.forEach((p, i) => o[p[0]] = p[0].startsWith("Outros") || p[0].startsWith("Por ler") ? "#6B7785" : pal[i % pal.length]); return o; }
+
+/* ---------- PLANO DE INVESTIMENTO ---------- */
+function alvos(){ return Object.assign({}, S.cfg.alvo || {}); }
+function sugerirCompras(A, alvo, ps){
+  const val = {}; ps.filter(p => p.qtd > 0 && p.temPreco).forEach(p => val[p.sym] = p.valor);
+  const syms = Object.keys(alvo).filter(s => +alvo[s] > 0); if (!syms.length || !(A > 0)) return [];
+  const somaA = syms.reduce((s, x) => s + +alvo[x], 0), T = Object.values(val).reduce((s, v) => s + v, 0), N = T + A;
+  const def = {}; syms.forEach(s => def[s] = Math.max(0, +alvo[s] / somaA * N - (val[s] || 0)));
+  const D = Object.values(def).reduce((s, v) => s + v, 0);
+  let compra = {};
+  if (D <= 0) syms.forEach(s => compra[s] = A * +alvo[s] / somaA);
+  else if (D >= A) syms.forEach(s => compra[s] = A * def[s] / D);
+  else syms.forEach(s => compra[s] = def[s] + (A - D) * +alvo[s] / somaA);
+  /* compras muito pequenas não compensam: redistribui */
+  const min = +S.cfg.minCompra || 10;
+  let fica = syms.filter(s => compra[s] >= min);
+  if (!fica.length) fica = [syms.sort((a, b) => compra[b] - compra[a])[0]];
+  const sf = fica.reduce((s, x) => s + compra[x], 0) || 1;
+  return fica.map(s => [s, Math.round(A * compra[s] / sf)]).sort((a, b) => b[1] - a[1]);
+}
+function investidoMes(){ const m = hoje().slice(0, 7); return vivos("ops").filter(o => o.data.slice(0, 7) === m).reduce((s, o) => s + (o.tipo === "compra" ? +o.total || 0 : o.tipo === "venda" ? -(+o.total || 0) : 0), 0); }
+function valorPlano(){ const d = DIA.mes; return S.cfg.planoValor != null && S.cfg.planoValor !== "" ? +S.cfg.planoValor : (d && d.sugerido > 0 ? Math.round(d.sugerido) : 100); }
+function planoBloco(ps){
+  const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0) || 1, al = alvos();
+  const linhas = [...new Set(ab.map(p => p.sym).concat(Object.keys(al)).concat(vivos("seguir").map(x => x.id)))];
+  const A = valorPlano(), sug = sugerirCompras(A, al, ps), soma = Object.values(al).reduce((s, v) => s + (+v || 0), 0);
+  const d = DIA.mes;
+  return `<div class="card" style="margin-bottom:14px" id="plano"><h2>Plano de investimento</h2>
+    ${d ? `<div class="metrics" style="margin-bottom:12px">
+      <div><span class="n">Líquido do mês (Vencimentos)</span><span class="v mono">${d.liquido != null ? eur(d.liquido, 0) : "—"}</span></div>
+      <div><span class="n">Gastos previstos (dia.)</span><span class="v mono">${eur(d.gastosPrev || 0, 0)}</span></div>
+      <div><span class="n">Poupança do mês</span><span class="v mono">${eur(d.poupanca || 0, 0)}</span></div>
+      <div><span class="n">Sobra prevista</span><span class="v mono ${tone(d.sobra)}">${eur(d.sobra, 0)}</span></div>
+      <div><span class="n">Sugerido para investir (${NF0.format(+S.cfg.pctSobra || 50)}% da sobra)</span><span class="v mono">${eur(Math.max(0, d.sugeridoBruto), 0)}</span><span class="sub">já investido este mês: ${eur(investidoMes(), 0)}</span></div>
+    </div>` : `<p class="muted" style="font-size:13px;margin:0 0 12px">Liga a app dia. nas Definições para a sugestão mensal usar o teu vencimento líquido e os gastos previstos.</p>`}
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+      <label class="f" style="flex:0 1 200px">Valor a investir (€)<input class="in mono" inputmode="decimal" value="${NF0.format(A).replace(/\s/g, "")}" onchange="setCfg('planoValor', num(this.value) || '')"></label>
+      ${d ? `<label class="f" style="flex:0 1 200px">% da sobra a investir<input class="in mono" inputmode="decimal" value="${+S.cfg.pctSobra || 50}" onchange="setCfg('pctSobra', num(this.value) || 50);atualizarDia()"></label>` : ""}
+      <label class="f" style="flex:0 1 160px">Compra mínima (€)<input class="in mono" inputmode="decimal" value="${+S.cfg.minCompra || 10}" onchange="setCfg('minCompra', num(this.value) || 10)"></label>
+      ${S.cfg.planoValor != null && S.cfg.planoValor !== "" && d ? `<button class="btn sm" onclick="setCfg('planoValor','')">Usar o valor sugerido</button>` : ""}
+    </div>
+    ${sug.length ? `<div class="warn" style="background:var(--up-bg);color:var(--txt);margin:0 0 12px"><strong>Para te aproximares da distribuição alvo, investe ${eur(A, 0)} assim:</strong><ul style="margin:6px 0 0;padding-left:18px;line-height:1.7">${sug.map(([s, v]) => `<li><span class="tk">${esc(s)}</span> — <span class="mono">${eur(v, 0)}</span></li>`).join("")}</ul></div>` : `<p class="muted" style="font-size:13px">Define a percentagem alvo de cada ativo (pode ser 0) para a app sugerir onde investir.</p>`}
+    <div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Atual</th><th class="r">Alvo %</th><th class="r">Diferença</th></tr></thead><tbody>
+    ${linhas.map(s => { const p = ab.find(x => x.sym === s), at = p ? p.valor / tot : 0, av = al[s] != null ? +al[s] : null; return `<tr><td><span class="tk">${esc(s)}</span> <span class="sub">${esc(p ? p.tipo : "a seguir")}</span></td><td class="r mono">${pct(at)}</td><td class="r"><input class="in mono" style="width:80px;text-align:right;min-height:34px" inputmode="decimal" aria-label="Alvo para ${esc(s)}" value="${av != null ? String(av).replace(".", ",") : ""}" onchange="setAlvo('${esc(s)}', this.value)"></td><td class="r mono ${av != null ? tone(av / 100 - at) : ""}">${av != null ? (av / 100 - at >= 0 ? "+" : "−") + NF1.format(Math.abs(av - at * 100)) + " p.p." : ""}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><span class="mono ${Math.abs(soma - 100) < .5 ? "up" : "down"}" style="font-size:13px">Soma dos alvos: ${NF1.format(soma)}%</span><button class="btn sm" onclick="alvosAtuais()">Usar os pesos atuais</button>${soma ? `<button class="btn sm" onclick="setCfg('alvo', {})">Limpar</button>` : ""}</div>
+  </div>`;
+}
+function setAlvo(s, v){ const a = alvos(), n = num(v); if (v === "" || !isFinite(n)) delete a[s]; else a[s] = Math.max(0, Math.min(100, n)); setCfg("alvo", a); }
+function alvosAtuais(){ const ps = posicoes().filter(p => p.qtd > 0 && p.temPreco), t = ps.reduce((s, p) => s + p.valor, 0) || 1, a = {}; ps.forEach(p => a[p.sym] = Math.round(p.valor / t * 1000) / 10); setCfg("alvo", a); }
+
+/* ---------- LIGAÇÃO À APP dia. ---------- */
+let DIA = store.get("cart.dia", {mes:null, erro:"", quando:0});
+const diaCfg = () => S.cfg.dia || {};
+function resumoParaDia(){
+  const f0 = FILTRO; FILTRO = ""; const ps = posicoes(), t = totais(ps); FILTRO = f0;
+  const m = hoje().slice(0, 7);
+  const r = {id:"resumo", valor:Math.round(t.valor * 100) / 100, investido:Math.round(t.custo * 100) / 100, ganho:Math.round(t.ganho * 100) / 100, rend:t.rend, dia:Math.round(t.dia * 100) / 100, diaPct:t.diaPct,
+    div12:Math.round(t.div12 * 100) / 100, divMes:Math.round(vivos("ops").filter(o => o.tipo === "dividendo" && o.data.slice(0, 7) === m).reduce((s, o) => s + (+o.total || 0), 0) * 100) / 100,
+    investidoMes:Math.round(investidoMes() * 100) / 100, url:location.href.split("#")[0], quando:P.quando || Date.now()};
+  return r;
+}
+async function atualizarDia(){
+  const c = diaCfg(); if (!c.url || !c.code || !L.code) return;
+  try{
+    const lim = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10);
+    const r = resumoParaDia(), sig = JSON.stringify(Object.assign({}, r, {quando:0}));
+    const ant = store.get("cart.diaSig", "");
+    const itens = [];
+    if (sig !== ant) itens.push(Object.assign(r, {upd:Date.now()}));
+    S.ops.filter(o => o.data >= lim && o.tipo !== "dividendo").forEach(o => itens.push(o.del ? {id:"op-" + o.id, del:true, upd:o.upd || Date.now()} : {id:"op-" + o.id, upd:o.upd || o.criado || 1, data:o.data, sym:o.sym, valor:o.tipo === "venda" ? -(+o.total || 0) : +o.total || 0}));
+    const res = await fetch(c.url.replace(/\/+$/, "") + "/api/sync", {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({code:c.code, data:{v:1, cfg:{upd:0}, carteira:itens}})});
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || "Erro " + res.status);
+    store.set("cart.diaSig", sig);
+    const d = j.data || {}, mesAtual = hoje().slice(0, 7);
+    const pc = (d.paraCarteira || []).find(x => x.id === "mes" && !x.del);
+    const temDados = ["tarefas", "gastos", "poupObj", "turnos"].some(k => (d[k] || []).length) || d.venc;
+    if (!temDados){ DIA = {mes:null, erro:"Este código não tem dados na app dia.: confirma o código em dia. › Definições › Sincronização.", quando:Date.now()}; }
+    else if (!pc || pc.mes !== mesAtual){ DIA = {mes:null, erro:"Ligado. Abre a app dia. uma vez (já atualizada) para ela enviar os valores deste mês.", quando:Date.now()}; }
+    else {
+      const sobra = (pc.liquido != null ? pc.liquido : 0) - (pc.gastosPrev || 0) - (pc.poupanca || 0);
+      const bruto = sobra * (+S.cfg.pctSobra || 50) / 100;
+      DIA = {mes:Object.assign({}, pc, {sobra, sugeridoBruto:bruto, sugerido:Math.max(0, bruto - Math.max(0, investidoMes()))}), erro:"", quando:Date.now()};
+    }
+  }catch(e){ DIA = Object.assign({}, DIA, {erro:"Ligação à app dia.: " + e.message, quando:Date.now()}); }
+  store.set("cart.dia", DIA); renderBg();
+}
+
+
+/* ---------- NOTIFICAÇÕES ---------- */
+const NOTIF_DEF = {variacao:5, alertas:true, dividendos:true, resultados:true, resumo:true, resumoHora:"19:00"};
+const notifCfg = () => Object.assign({}, NOTIF_DEF, S.cfg.notif || {});
+function setNotif(k, v){ setCfg("notif", Object.assign(notifCfg(), {[k]:v})); }
+let NOTIF = {suportado:"serviceWorker" in navigator && "PushManager" in window && "Notification" in window, ligado:false};
+const urlB64 = s => { const p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+const nomeAparelho = () => /iPhone/.test(navigator.userAgent) ? "iPhone" : /iPad/.test(navigator.userAgent) ? "iPad" : /Android/.test(navigator.userAgent) ? "Android" : /Mac/.test(navigator.userAgent) ? "Mac" : "PC";
+async function estadoNotif(){
+  if (!NOTIF.suportado) return;
+  try{ const reg = await navigator.serviceWorker.getRegistration("./"); const sub = reg && await reg.pushManager.getSubscription(); NOTIF.ligado = !!sub && Notification.permission === "granted"; }catch(e){}
+}
+async function ativarNotif(){
+  if (!NOTIF.suportado){
+    return toast(/iPhone|iPad/.test(navigator.userAgent) ? "No iPhone: adiciona a app ao ecrã principal (Partilhar › Adicionar ao ecrã principal), abre-a pelo ícone e volta aqui." : "Este browser não suporta notificações.", 7000);
+  }
+  try{
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return toast("Sem autorização para notificações. Ativa-as nas definições do browser/iPhone.", 6000);
+    const reg = await navigator.serviceWorker.register("./sw.js");
+    await navigator.serviceWorker.ready;
+    const {chave} = await api("/api/push/chave", {});
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64(chave)});
+    await api("/api/push/registar", {sub:sub.toJSON(), nome:nomeAparelho()});
+    NOTIF.ligado = true; render(); toast("Notificações ligadas neste aparelho.");
+  }catch(e){ toast("Não foi possível ligar as notificações: " + e.message, 6000); }
+}
+async function desligarNotif(){
+  try{ const reg = await navigator.serviceWorker.getRegistration("./"); const sub = reg && await reg.pushManager.getSubscription(); if (sub){ await api("/api/push/remover", {endpoint:sub.endpoint}).catch(() => {}); await sub.unsubscribe(); } }catch(e){}
+  NOTIF.ligado = false; render(); toast("Notificações desligadas neste aparelho.");
+}
+async function testarNotif(){ try{ const r = await api("/api/push/teste", {}); toast(r.enviados ? `Enviada para ${r.enviados} aparelho(s).` : "Nenhum aparelho registado."); }catch(e){ toast(e.message, 6000); } }
+function notifBloco(){
+  const c = notifCfg(), al = vivos("alertas");
+  return `<div class="card f1" style="display:flex;flex-direction:column;gap:14px" id="notif">
+    <h2 style="margin:0">Notificações</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${NOTIF.ligado ? `<span class="status ok"><i></i>Ligadas neste aparelho</span><button class="btn sm" onclick="testarNotif()">Enviar teste</button><button class="btn sm" onclick="desligarNotif()">Desligar</button>` : `<button class="btn pri" onclick="ativarNotif()">Ligar notificações neste aparelho</button>`}</div>
+    ${/iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone ? `<p class="muted" style="font-size:13px;margin:0">No iPhone só funcionam com a app aberta pelo ícone do ecrã principal.</p>` : ""}
+    <div class="setgrid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+      ${[["dividendos","Dividendos (data ex e dia do pagamento)"],["resultados","Resultados trimestrais (véspera e dia)"],["alertas","Alertas de preço"],["resumo","Resumo semanal ao domingo"]].map(([k, t]) => `<label><span>${t}</span><input type="checkbox" style="width:22px;min-height:22px" ${c[k] ? "checked" : ""} onchange="setNotif('${k}', this.checked)"></label>`).join("")}
+      <label><span>Avisar se uma posição variar mais de (%) num dia (0 = não)</span><input type="number" inputmode="decimal" min="0" step="0.5" value="${c.variacao}" onchange="setNotif('variacao', num(this.value) || 0)"></label>
+      <label><span>Hora do resumo de domingo</span><input type="time" style="width:110px" value="${esc(c.resumoHora)}" onchange="setNotif('resumoHora', this.value)"></label>
+    </div>
+    <h2 style="margin:6px 0 0">Alertas de preço</h2>
+    ${al.length ? `<ul class="legend">${al.map(a => `<li><span><span class="tk">${esc(a.sym)}</span>&nbsp;${a.cond === "abaixo" ? "abaixo de" : "acima de"} <span class="mono">${esc(String(a.preco).replace(".", ","))}</span>${a.disparado ? ` <span class="pill up">disparou ${a.quando ? new Date(a.quando).toLocaleDateString("pt-PT") : ""}</span>` : ""}</span><span style="display:flex;gap:6px">${a.disparado ? `<button class="btn sm" onclick="reativarAlerta('${a.id}')">Reativar</button>` : ""}<button class="btn sm" onclick="apagarAlerta('${a.id}')" aria-label="Apagar alerta">Apagar</button></span></li>`).join("")}</ul>` : `<p class="muted" style="font-size:13px;margin:0">Cria alertas na Análise de cada ativo ou na lista «A seguir».</p>`}
+  </div>`;
+}
+function abrirAlerta(sym){
+  const p = (P.precos[sym] || PS.precos[sym] || (analiseDados[sym] || {}).p || {});
+  dlg(`<h3>Alerta de preço · ${esc(sym)}</h3>
+  <p class="muted" style="margin:0">Preço atual: <span class="mono">${fmtPreco(p.preco, p.moeda)}</span>. O alerta usa a moeda do ativo${p.moeda ? ` (${esc(p.moeda)})` : ""}.</p>
+  <div class="seg" role="group" aria-label="Condição" style="align-self:flex-start"><button type="button" id="aAc" class="on" onclick="this.classList.add('on');$('#aAb').classList.remove('on')">Sobe acima de</button><button type="button" id="aAb" onclick="this.classList.add('on');$('#aAc').classList.remove('on')">Desce abaixo de</button></div>
+  <label class="f">Preço<input class="in mono" id="aPreco" inputmode="decimal" value="${p.preco ? String(+(p.preco).toFixed(2)).replace(".", ",") : ""}"></label>
+  <label class="f">Nota (opcional)<input class="in" id="aNota" placeholder="Ex.: reforçar posição"></label>
+  <div class="acts"><button class="btn" onclick="fecharDlg()">Cancelar</button><button class="btn pri" onclick="guardarAlerta('${esc(sym)}')">Criar alerta</button></div>`);
+}
+function guardarAlerta(sym){
+  const v = num($("#aPreco").value); if (!(v > 0)) return toast("Indica o preço.");
+  upsert("alertas", {id:uid(), sym, cond:$("#aAb").classList.contains("on") ? "abaixo" : "acima", preco:v, nota:$("#aNota").value.trim(), disparado:false});
+  fecharDlg(); render(); toast(NOTIF.ligado ? "Alerta criado." : "Alerta criado. Liga as notificações em Ajustes para o receberes.", 4500);
+}
+function reativarAlerta(id){ const a = vivos("alertas").find(x => x.id === id); if (a) upsert("alertas", Object.assign({}, a, {disparado:false, quando:null})); render(); }
+function apagarAlerta(id){ const a = vivos("alertas").find(x => x.id === id); if (a) upsert("alertas", Object.assign({}, a, {del:true})); render(); }
+
+/* ---------- LISTA «A SEGUIR» ---------- */
+let PS = store.get("cart.pseg", {precos:{}, quando:0});
+const seguidos = () => vivos("seguir");
+const aSeguir = sym => seguidos().some(x => x.id === sym);
+function seguir(sym, nome){ const x = (S.seguir || []).find(y => y.id === sym); if (x && !x.del) upsert("seguir", Object.assign({}, x, {del:true})); else upsert("seguir", {id:sym, nome:nome || sym, del:false}); render(); }
+async function atualizarSeguir(forcar){
+  const syms = seguidos().map(x => x.id); if (!syms.length || !L.code) return;
+  if (!forcar && Date.now() - PS.quando < 4 * 60e3 && syms.every(s => PS.precos[s])) return;
+  try{ const j = await api("/api/precos", {symbols:syms, range:"1y"}); PS = {precos:j.precos, fx:j.fx, quando:Date.now()}; store.set("cart.pseg", PS); renderBg(); }catch(e){}
+}
+function varDias(p, d){ const h = (p && p.hist) || []; if (!h.length || !p.preco) return null; const lim = new Date(Date.now() - d * 864e5).toISOString().slice(0, 10); const b = [...h].reverse().find(x => x[0] <= lim); return b ? p.preco / b[1] - 1 : null; }
+function seguirBloco(){
+  const ls = seguidos(); if (!ls.length) return "";
+  setTimeout(() => atualizarSeguir(), 30);
+  return `<div class="card" style="margin-bottom:14px"><h2>A seguir</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Preço</th><th class="r">Hoje</th><th class="r">1 mês</th><th class="r">1 ano</th><th></th></tr></thead><tbody>
+  ${ls.map(x => { const p = PS.precos[x.id] || {}, vd = p.anterior ? p.preco / p.anterior - 1 : null, v1 = varDias(p, 31), v12 = varDias(p, 365);
+    return `<tr><td><a href="#analise/${encodeURIComponent(x.id)}" style="text-decoration:none;color:inherit"><span class="tk">${esc(x.id)}</span><div class="sub">${esc(p.nome || x.nome || "")}</div></a></td><td class="r mono">${fmtPreco(p.preco, p.moeda)}${p.sessao ? `<div class="sub">${esc(p.sessao)}</div>` : ""}</td><td class="r mono ${tone(vd)}">${vd != null ? pctS(vd) : "—"}</td><td class="r mono ${tone(v1)}">${v1 != null ? pctS(v1) : "—"}</td><td class="r mono ${tone(v12)}">${v12 != null ? pctS(v12) : "—"}</td>
+    <td class="r" style="white-space:nowrap"><button class="btn sm" onclick="abrirAlerta('${esc(x.id)}')" aria-label="Criar alerta para ${esc(x.id)}"><svg class="i"><use href="#i-bell"/></svg></button> <button class="btn sm" onclick="seguir('${esc(x.id)}')">Remover</button></td></tr>`; }).join("")}
+  </tbody></table></div></div>`;
+}
+
+/* ---------- CALENDÁRIO ---------- */
+let CAL = store.get("cart.cal", {cal:{}, quando:0, chave:""});
+async function atualizarCal(forcar){
+  const held = [...new Set(posicoes().filter(p => p.qtd > 0).map(p => p.sym))], syms = [...new Set(held.concat(seguidos().map(x => x.id)))];
+  const chave = syms.slice().sort().join(","); if (!syms.length || !L.code) return;
+  if (!forcar && CAL.chave === chave && Date.now() - CAL.quando < 6 * 3600e3) return;
+  try{ const j = await api("/api/calendario", {symbols:syms}, 120000); CAL = {cal:j.cal, quando:Date.now(), chave:j.completo ? chave : ""}; store.set("cart.cal", CAL); renderBg(); }catch(e){}
+}
+function eventosCal(dias){
+  const hojeD = hoje(), fim = new Date(Date.now() + dias * 864e5).toISOString().slice(0, 10), out = [];
+  const ps = posicoes().filter(p => p.qtd > 0);
+  Object.values(CAL.cal || {}).forEach(c => {
+    const p = ps.find(x => x.sym === c.sym);
+    if (p) (c.prox || []).forEach(d => {
+      const v = p.qtd * d.valor * escalaMoeda(c.moeda || p.moeda) * fxAgora(c.moeda || p.moeda);
+      if (d.ex >= hojeD && d.ex <= fim) out.push({data:d.ex, sym:c.sym, tipo:"ex", txt:`Data ex-dividendo${d.estimado ? " (estimada)" : ""}`, valor:v, est:d.estimado});
+      if (d.pag && d.pag >= hojeD && d.pag <= fim) out.push({data:d.pag, sym:c.sym, tipo:"pag", txt:"Pagamento do dividendo", valor:v});
+    });
+    (c.resultados || []).forEach(d => { if (d >= hojeD && d <= fim) out.push({data:d, sym:c.sym, tipo:"res", txt:p ? "Resultados trimestrais" : "Resultados trimestrais (a seguir)"}); });
+  });
+  return out.sort((a, b) => a.data.localeCompare(b.data));
+}
+function previsaoMensal(){
+  const ps = posicoes().filter(p => p.qtd > 0), mes = {};
+  Object.values(CAL.cal || {}).forEach(c => { const p = ps.find(x => x.sym === c.sym); if (!p) return;
+    (c.prox || []).forEach(d => { const dd = d.pag || d.ex; if (dd < hoje()) return; const k = dd.slice(0, 7); mes[k] = (mes[k] || 0) + p.qtd * d.valor * escalaMoeda(c.moeda || p.moeda) * fxAgora(c.moeda || p.moeda); }); });
+  return mes;
+}
+function calendarioBloco(){
+  setTimeout(() => atualizarCal(), 30);
+  const ev = eventosCal(90), DS = ["dom","seg","ter","qua","qui","sex","sáb"];
+  const semCal = Object.values(CAL.cal || {}).length && !Object.values(CAL.cal).some(c => c.comCalendario);
+  return `<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Calendário · próximos 90 dias</h2><button class="btn sm" onclick="atualizarCal(true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar</button></div>
+  ${ev.length ? `<div class="tbl" style="margin-top:10px"><table><tbody>${ev.map(e => `<tr><td class="mono" style="white-space:nowrap">${DS[new Date(e.data + "T12:00:00").getDay()]} ${e.data.slice(8, 10)}/${e.data.slice(5, 7)}</td><td><a href="#analise/${encodeURIComponent(e.sym)}" class="tk" style="text-decoration:none;color:inherit">${esc(e.sym)}</a></td><td>${e.tipo === "res" ? '<span class="pill">Resultados</span>' : `<span class="pill up">${e.tipo === "ex" ? "Data ex" : "Pagamento"}</span>`} <span class="muted2" style="font-size:13px">${esc(e.txt)}</span></td><td class="r mono">${e.valor ? "≈ " + eur(e.valor) : ""}</td></tr>`).join("")}</tbody></table></div>`
+    : `<p class="muted" style="font-size:14px;margin:10px 0 0">${CAL.quando ? "Sem dividendos nem resultados previstos nos próximos 90 dias." : "A carregar…"}</p>`}
+  ${semCal ? `<p class="muted" style="font-size:12px;margin:10px 0 0">As datas de resultados e de pagamento não estão disponíveis neste momento; as datas ex-dividendo são estimadas pelo histórico.</p>` : ""}
+  <p class="muted" style="font-size:12px;margin:8px 0 0">Data ex: para receberes o dividendo tens de ter a ação antes deste dia. Valores brutos, antes de impostos.</p></div>`;
+}
+
+/* ---------- RESUMO SEMANAL ---------- */
+const resumos = () => vivos("resumos").slice().sort((a, b) => String(b.id).localeCompare(String(a.id)));
+let resumoSel = 0;
+async function pedirResumo(){
+  if (PEND.res) return; PEND.res = Date.now(); render();
+  try{ await api("/api/resumo", {}, 300000); await sync(); resumoSel = 0; toast("Resumo pronto."); }catch(e){ toast(e.message, 6000); }
+  finally{ PEND.res = null; render(); }
+}
+function resumoBloco(){
+  const rs = resumos(), r = rs[resumoSel] || rs[0];
+  return `<div class="card" style="margin-bottom:14px;border-color:var(--line2)"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>RESUMO DA SEMANA${r ? " · " + dataPT(r.id) : ""}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${rs.length > 1 ? `<select class="in" style="min-height:36px;width:auto;font-size:14px" aria-label="Escolher semana" onchange="resumoSel=+this.value;render()">${rs.map((x, i) => `<option value="${i}" ${i === resumoSel ? "selected" : ""}>${dataPT(x.id)}</option>`).join("")}</select>` : ""}
+    ${PEND.res ? `<button class="btn sm" disabled><span class="spin" aria-hidden="true"></span> A preparar… <span data-t0="${PEND.res}">${tempoTxt(PEND.res)}</span></button>` : `<button class="btn sm" onclick="pedirResumo()">Gerar agora</button>`}</div></div>
+    ${r ? `<h3 style="margin:12px 0 4px;font-size:18px">${esc(r.titulo)}</h3>
+      <p class="mono" style="margin:0 0 10px"><span>${eur(r.valor)}</span> · <span class="${tone(r.varSemana)}">${pctS(r.varSemana)} (${eurS(r.variacaoEUR)})</span>${r.melhor ? ` · melhor: <span class="tk">${esc(r.melhor.ativo)}</span> <span class="${tone(r.melhor.semanaPct)}">${pctS(r.melhor.semanaPct / 100)}</span>` : ""}${r.pior ? ` · pior: <span class="tk">${esc(r.pior.ativo)}</span> <span class="${tone(r.pior.semanaPct)}">${pctS(r.pior.semanaPct / 100)}</span>` : ""}</p>
+      ${r.resumo ? `<p style="line-height:1.55;margin:0 0 10px">${esc(r.resumo)}</p>` : ""}
+      ${(r.destaques || []).length ? `<ul style="margin:0 0 10px;padding-left:18px;line-height:1.6">${r.destaques.map(d => `<li><span class="tk">${esc(d.ativo)}</span> — ${esc(d.texto)}</li>`).join("")}</ul>` : ""}
+      ${(r.atencao || []).length ? `<div class="warn" style="margin:0 0 10px"><strong>Na próxima semana:</strong> ${r.atencao.map(esc).join(" · ")}</div>` : ""}
+      ${(r.fontes || []).length ? `<div class="srcs">${r.fontes.slice(0, 6).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div>` : ""}`
+    : `<p class="muted" style="margin:10px 0 0;line-height:1.5">Todos os domingos às ${esc(notifCfg().resumoHora)} a IA faz o resumo da semana: como correu a carteira, as notícias das tuas maiores posições e o que vigiar a seguir${NOTIF.ligado ? "" : " (liga as notificações em Ajustes para o receberes no telemóvel)"}.</p>`}
+  </div>`;
+}
+
+/* ---------- AVISOS SOBRE OS DADOS ---------- */
+function listaAvisos(ps){
+  const out = [], hojeD = hoje();
+  duplicadosProvaveis().forEach(o => out.push({txt:`<strong>${esc(o.sym)}:</strong> a compra de ${String(o.qtd).replace(".", ",")} unidades de ${dataPT(o.data)} (adicionada à mão) parece repetir uma compra importada. Se for a mesma, apaga-a.`, btn:`<button class="btn sm" onclick="abrirOp('${o.id}')">Ver e apagar</button>`}));
+  ps.filter(p => p.semCompra).forEach(p => out.push({txt:`<strong>${esc(p.sym)}:</strong> ${p.semCompra.map(x => `venda de ${String(x.qtd).replace(".", ",")} unidades em ${dataPT(x.data)}`).join(", ")} sem compra registada antes. Falta o extrato mais antigo com essa compra; até lá, o ganho dessa venda não entra nas contas.`, btn:`<button class="btn sm" onclick="abrirImport()">Importar extrato</button>`}));
+  ps.filter(p => p.qtd > 0 && !p.temPreco).forEach(p => out.push({txt:`<strong>${esc(p.sym)}:</strong> sem preço de mercado. Confirma o símbolo (por exemplo, a bolsa certa).`, btn:`<button class="btn sm" onclick="verAtivo('${esc(p.sym)}')">Ver</button>`}));
+  const lim = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
+  const porReg = pagamentos().filter(x => !x.registado && x.data < lim && x.data >= new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10));
+  if (porReg.length) out.push({txt:`${porReg.length} dividendo${porReg.length > 1 ? "s" : ""} detetado${porReg.length > 1 ? "s" : ""} no histórico ainda por registar (desde ${dataPT(porReg[porReg.length - 1].data)}). Importa o extrato mais recente ou regista-os.`, btn:`<a class="btn sm" href="#dividendos">Ver</a>`});
+  corretoras().filter(c => c !== "Manual").forEach(c => {
+    const ult = vivos("ops").filter(o => corretoraDe(o) === c).map(o => o.data).sort().pop();
+    const temAberta = (() => { const f0 = FILTRO; FILTRO = c; const r = posicoes().some(p => p.qtd > 0); FILTRO = f0; return r; })();
+    if (ult && temAberta && ult < new Date(Date.now() - 40 * 864e5).toISOString().slice(0, 10)) out.push({txt:`Último movimento da <strong>${esc(c)}</strong> registado: ${dataPT(ult)}. Se compraste, vendeste ou recebeste dividendos depois, importa o extrato mais recente.`, btn:`<button class="btn sm" onclick="store.set('cart.corretora','${esc(c)}');abrirImport()">Importar</button>`});
+  });
+  const semCor = vivos("ops").filter(o => !o.origem).length;
+  if (semCor) out.push({txt:`${semCor} movimento${semCor > 1 ? "s" : ""} sem corretora. Indica a corretora para veres os valores separados.`, btn:`<a class="btn sm" href="#definicoes">Corretoras</a>`});
+  ps.filter(p => p.qtd > 0 && (ativo(p.sym) || {}).fonte === "pendente").forEach(p => out.push({txt:`<strong>${esc(p.sym)}:</strong> setores ainda por classificar.`, btn:`<button class="btn sm" onclick="reclassificar('${esc(p.sym)}')">Classificar</button>`}));
+  return out;
 }
 
 /* ---------- EXPOSIÇÃO ---------- */
@@ -933,7 +1347,11 @@ function vExposicao(m){
   const ps = posicoes(), ex = exposicao(ps), al = alertas(ex);
   const cores = {}; ex.ativos.forEach((a, i) => cores[a[0]] = ["#6EA8FE","#4FC1B0","#F2A65A","#B48CF2","#F27E9B","#E8D36A","#5FD3E8","#A3D977","#C9A27E","#9DB4FF"][i % 10]);
   const corM = {EUR:"#6EA8FE", USD:"#4FC1B0", GBP:"#B48CF2", CHF:"#F27E9B", JPY:"#E8D36A"};
-  m.innerHTML = `<div class="head"><h1>Exposição</h1><span class="muted" style="font-size:14px">Total analisado: <span class="mono">${eur(ex.total)}</span></span></div>
+  if (!COMP.a && ps.some(p => p.qtd > 0 && eFundo(p) && !(ativo(p.sym) || {}).comp && !COMP.tentados[p.sym])) setTimeout(() => carregarComposicoes(), 50);
+  m.innerHTML = `<div class="head"><h1>Exposição e plano</h1><span class="muted" style="font-size:14px">Total analisado: <span class="mono">${eur(ex.total)}</span></span></div>
+  ${chipsCorretora()}
+  ${exposicaoRealBloco(ps)}
+  ${planoBloco(ps)}
   ${al.length ? `<div class="card" style="margin-bottom:14px"><h2>Pontos de atenção</h2>${al.map(a => `<div class="warn">${esc(a)}</div>`).join("")}</div>` : ""}
   <div class="row">
     <div class="card f1"><h2>Setores</h2>${donutBloco("cSet2", ex.setores, COR_SETOR, 14)}<p class="muted" style="font-size:12.5px;margin:12px 0 0">Nos ETFs, cada setor conta pela parte do ETF que lá está investida.</p></div>
@@ -953,9 +1371,10 @@ function vExposicao(m){
 /* ---------- ANÁLISE ---------- */
 let analiseDados = {};
 function vAnalise(m){
-  const meus = [...new Set(posicoes().filter(p => p.qtd > 0).map(p => p.sym))];
+  const meus = [...new Set(posicoes().filter(p => p.qtd > 0).map(p => p.sym).concat(seguidos().map(x => x.id)))];
   const sym = ARG || meus[0] || "";
   m.innerHTML = `<div class="head"><h1>Análise</h1></div>
+  ${seguirBloco()}
   <div class="card" style="margin-bottom:14px;display:flex;flex-direction:column;gap:12px">
     ${meus.length ? `<div class="chips">${meus.map(s => `<a class="chip ${s === sym ? "on" : ""}" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit" href="#analise/${encodeURIComponent(s)}">${esc(s)}</a>`).join("")}</div>` : ""}
     <div style="position:relative"><label class="f">Analisar outro ativo<input class="in" id="aBusca" placeholder="Procura uma ação, ETF, REIT ou cripto" autocomplete="off" oninput="buscarAn(this.value)"></label><div id="aRes" class="results hide" style="margin-top:6px"></div></div>
@@ -996,7 +1415,7 @@ async function carregarAnalise(sym){
       <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="mono" style="font-size:30px;font-weight:600">${fmtPreco(p.preco, p.moeda)}</span><span class="mono ${tone(varDia)}">${pctS(varDia)} ${p.sessao ? esc(p.sessao) : "hoje"}</span>
       ${pos ? `<span class="muted" style="font-size:14px">A tua posição: ${eur(pos.valor)} · <span class="mono ${tone(pos.rend)}">${pctS(pos.rend)}</span></span>` : ""}</div>
     </div>
-    ${pos ? "" : `<button class="btn" onclick='abrirOp(null, ${JSON.stringify({sym, nome:p.nome, tipoY:p.tipoY}).replace(/'/g, "&#39;")})'><svg class="i"><use href="#i-plus"/></svg>Adicionar à carteira</button>`}
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="abrirAlerta('${esc(sym)}')"><svg class="i"><use href="#i-bell"/></svg>Criar alerta</button>${pos ? "" : `<button class="btn" onclick="seguir('${esc(sym)}', '${esc(String(p.nome).replace(/'/g, ""))}')"><svg class="i"><use href="#i-eye"/></svg>${aSeguir(sym) ? "Deixar de seguir" : "Seguir"}</button><button class="btn" onclick='abrirOp(null, ${esc(JSON.stringify({sym, nome:p.nome, tipoY:p.tipoY}))})'><svg class="i"><use href="#i-plus"/></svg>Adicionar à carteira</button>`}</div>
   </div>
   <div class="row">
     <div class="f2" style="display:flex;flex-direction:column;gap:14px;min-width:0">
@@ -1083,7 +1502,7 @@ async function pedirAnalise(sym, forcar){
 }
 
 /* ---------- pedidos à IA em curso ---------- */
-const PEND = {sug:null, an:{}}, ERRO = {sug:"", an:{}};
+const PEND = {sug:null, an:{}, res:null}, ERRO = {sug:"", an:{}};
 const segs = t0 => Math.round((Date.now() - t0) / 1000);
 const tempoTxt = t0 => { const s = segs(t0); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s"; };
 setInterval(() => document.querySelectorAll("[data-t0]").forEach(el => el.textContent = tempoTxt(+el.dataset.t0)), 1000);
@@ -1091,7 +1510,8 @@ setInterval(() => document.querySelectorAll("[data-t0]").forEach(el => el.textCo
 /* ---------- SUGESTÕES ---------- */
 function vSugestoes(m){
   const sg = S.sugestoes, cfg = S.cfg || {};
-  m.innerHTML = `<div class="head"><h1>Sugestões da IA</h1></div>
+  m.innerHTML = `<div class="head"><h1>IA: resumo e sugestões</h1></div>
+  ${resumoBloco()}
   <div class="card" style="margin-bottom:14px;display:flex;flex-direction:column;gap:14px">
     <div style="display:flex;gap:24px;flex-wrap:wrap">
       <div><div class="lab muted2" style="font-size:13px;margin-bottom:6px">Perfil de risco</div><div class="seg" role="group" aria-label="Perfil de risco">${["conservador","moderado","arrojado"].map(p => `<button type="button" class="${(cfg.perfil || "moderado") === p ? "on" : ""}" onclick="setCfg('perfil','${p}')">${p[0].toUpperCase() + p.slice(1)}</button>`).join("")}</div></div>
@@ -1145,14 +1565,38 @@ function vDefinicoes(m){
     <p class="muted" style="font-size:13px;margin:0;line-height:1.5">O código é a chave dos teus dados: quem o tiver vê a carteira. Guarda-o num sítio seguro e usa o mesmo no iPhone.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn pri" onclick="guardarLigacao()">Guardar e sincronizar</button>${L.code ? `<button class="btn" onclick="copiar(L.code)">Copiar código</button>` : ""}<span id="syncStatus" class="status"><i></i></span></div>
   </div>
+  ${notifBloco()}
+  </div><div class="row">
   <div class="card f1" style="display:flex;flex-direction:column;gap:14px">
     <h2 style="margin:0">Aspeto</h2>
     <div class="seg" role="group" aria-label="Tema" style="align-self:flex-start">${[["auto","Automático"],["light","Claro"],["dark","Escuro"]].map(t => `<button type="button" class="${L.tema === t[0] ? "on" : ""}" onclick="setTema('${t[0]}')">${t[1]}</button>`).join("")}</div>
+    <h2 style="margin:6px 0 0">Ligação à app dia.</h2>
+    <p class="muted" style="font-size:13px;margin:-4px 0 0;line-height:1.5">A carteira aparece na página inicial da dia., as compras podem contar para um objetivo de poupança, e o plano usa o teu vencimento líquido e os gastos previstos. O código está em dia. › Definições › Sincronização.</p>
+    <label class="f">Servidor da dia.<input class="in" id="dUrl" value="${esc(diaCfg().url || "https://dia-api.ricardo-j-silva11.workers.dev")}"></label>
+    <label class="f">Código pessoal da dia.<input class="in mono" id="dCod" value="${esc(diaCfg().code || "")}" autocomplete="off" placeholder="o mesmo que usas na app dia."></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" onclick="ligarDia()">Ligar à dia.</button>${diaCfg().code ? `<button class="btn sm" onclick="setCfg('dia', {});DIA={mes:null,erro:'',quando:0};store.set('cart.dia',DIA)">Desligar</button>` : ""}</div>
+    ${DIA.erro ? `<div class="warn" style="margin:0">${esc(DIA.erro)}</div>` : DIA.mes ? `<span class="status ok"><i></i>Ligado · líquido do mês ${eur(DIA.mes.liquido || 0, 0)}</span>` : ""}
+    <h2 style="margin:6px 0 0">Comparar com</h2>
+    <div class="seg" role="group" aria-label="Índice de comparação" style="align-self:flex-start">${BENCH.map(([s, n]) => `<button type="button" class="${benchSym() === s ? "on" : ""}" onclick="setCfg('bench','${s}');atualizarPrecos(true)">${n}</button>`).join("")}</div>
+    <h2 style="margin:6px 0 0">Corretoras</h2>
+    <ul class="legend">${corretoras().map(c => `<li><span>${esc(c)} <span class="sub">${vivos("ops").filter(o => corretoraDe(o) === c).length} movimentos</span></span><button class="btn sm" onclick="renomearCorretora('${esc(c)}')">Mudar nome</button></li>`).join("")}</ul>
     <h2 style="margin:6px 0 0">Cópia dos dados</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="exportar()">Exportar (JSON)</button><label class="btn" style="cursor:pointer">Importar<input type="file" accept="application/json" class="hide" onchange="importar(this.files[0])"></label></div>
     <p class="muted" style="font-size:13px;margin:0;line-height:1.5">No iPhone: abre a app no Safari, toca em Partilhar › Adicionar ao ecrã principal.</p>
   </div>
   </div>`;
+}
+async function ligarDia(){
+  const url = $("#dUrl").value.trim(), code = $("#dCod").value.trim();
+  if (code.length < 12) return toast("O código da dia. tem pelo menos 12 caracteres.");
+  setCfg("dia", {url, code}, true); store.set("cart.diaSig", ""); toast("A ligar à dia.…");
+  await atualizarDia(); render(); toast(DIA.erro ? DIA.erro : "Ligado à app dia.", 5000);
+}
+function renomearCorretora(c){
+  const n = prompt(`Novo nome para «${c}» (ex.: XTB):`, c === "Manual" ? "" : c); if (n == null) return;
+  const novo = n.trim(), now = Date.now(); let k = 0;
+  S.ops.forEach(o => { if (!o.del && corretoraDe(o) === c){ if (novo) o.origem = novo; else delete o.origem; o.upd = now; k++; } });
+  if (FILTRO === c) FILTRO = ""; save(); render(); toast(`${k} movimentos atualizados.`);
 }
 function gerarCodigo(){ const a = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789", r = crypto.getRandomValues(new Uint8Array(20)); $("#dCode").value = [...r].map(x => a[x % a.length]).join("").replace(/(.{5})(?!$)/g, "$1-"); }
 async function guardarLigacao(){
@@ -1175,6 +1619,8 @@ function importar(f){
 /* ---------- arranque ---------- */
 aplicarTema();
 rota();
+estadoNotif().then(() => { if (VIEW === "definicoes") render(); });
+if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistration("./").then(r => r && r.update()).catch(() => {});
 if (L.code) sync().then(() => atualizarPrecos());
 else if (!vivos("ops").length && !location.hash) location.hash = "#definicoes";
 setInterval(() => { if (document.visibilityState === "visible"){ atualizarPrecos(); sync(); } }, 5 * 60e3);
