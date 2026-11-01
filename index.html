@@ -101,6 +101,13 @@ tr.click{cursor:pointer} tr.click:hover td{background:var(--card2)}
 .empty{text-align:center;padding:40px 20px;color:var(--txt2)}
 .empty h2{color:var(--txt)}
 .chartbox{position:relative;width:100%}
+details.mais{margin-top:4px}
+td.r.mono{white-space:nowrap}
+@media (max-width:600px){table.curta .nm{display:none}table.curta{min-width:0!important}}
+details.mais>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--txt2);font-size:14px;font-weight:500}
+details.mais>summary::-webkit-details-marker{display:none}
+details.mais>summary::before{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+details.mais[open]>summary::before{transform:rotate(45deg)}
 .ai{display:flex;align-items:center;gap:8px;color:var(--acc);font-size:12.5px;font-weight:700;letter-spacing:.04em}
 .prose p{margin:0 0 10px;line-height:1.55;font-size:15px}
 .ideas{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
@@ -589,9 +596,8 @@ function semDados(m){
 function vPainel(m){
   const ps = posicoes(), t = totais(ps);
   if (!vivos("ops").length) return semDados(m);
-  const ab = ps.filter(p => p.qtd > 0 && p.temPreco).sort((a, b) => b.rend - a.rend);
-  const ex = exposicao(ps), al = alertas(ex), nAv = listaAvisos(ps).length;
-  m.innerHTML = `${chipsCorretora()}${nAv ? `<a class="warn" href="#posicoes" style="display:block;margin:0 0 14px;text-decoration:none">${nAv === 1 ? "Há 1 ponto a rever nos teus dados" : `Há ${nAv} pontos a rever nos teus dados`} (movimentos em falta, repetidos ou por classificar). Ver em Posições →</a>` : ""}
+  const nAv = listaAvisos(ps).length, al = alvos(), A = valorPlano(), sug = sugerirCompras(A, al, ps);
+  m.innerHTML = `${chipsCorretora()}${nAv ? `<a class="warn" href="#posicoes" style="display:block;margin:0 0 14px;text-decoration:none">${nAv === 1 ? "1 ponto a rever nos teus dados" : `${nAv} pontos a rever nos teus dados`} →</a>` : ""}
   <div class="head">
     <div style="display:flex;flex-direction:column;gap:6px">
       <span class="muted" style="font-size:14px">Valor da carteira</span>
@@ -605,57 +611,29 @@ function vPainel(m){
     </div>
   </div>
   <div class="grid4">
-    <div class="card kpi"><span class="lab">Total investido</span><span class="v mono">${eur(t.custo)}</span></div>
     <div class="card kpi"><span class="lab">Resultado hoje</span><span class="v mono ${tone(t.dia)}">${eurS(t.dia)} <span style="font-size:14px">${pctS(t.diaPct)}</span></span></div>
+    <div class="card kpi"><span class="lab">Total investido</span><span class="v mono">${eur(t.custo)}</span></div>
     <a class="card kpi" href="#dividendos" style="text-decoration:none;color:inherit"><span class="lab">Dividendos · 12 meses</span><span class="v mono">${eur(t.div12)}</span><span class="sub">previsão: ${eur(t.divPrev, 0)}/ano</span></a>
-    <div class="card kpi"><span class="lab">Melhor / mais fraca</span><span style="font-size:15px;font-weight:600;line-height:1.5">${ab[0] ? `${esc(ab[0].sym)} <span class="mono ${tone(ab[0].rend)}">${pctS(ab[0].rend)}</span>` : "—"}<br>${ab.length > 1 ? `${esc(ab[ab.length - 1].sym)} <span class="mono ${tone(ab[ab.length - 1].rend)}">${pctS(ab[ab.length - 1].rend)}</span>` : ""}</span></div>
+    <a class="card kpi" href="#exposicao" style="text-decoration:none;color:inherit"><span class="lab">Próximo investimento · ${eur(A, 0)}</span>${sug.length ? `<span style="font-size:15px;font-weight:600;line-height:1.5">${sug.slice(0, 2).map(([s, v]) => `${esc(s)} <span class="mono muted2">${eur(v, 0)}</span>`).join("<br>")}${sug.length > 2 ? ` <span class="sub">+${sug.length - 2}</span>` : ""}</span>` : `<span class="sub" style="line-height:1.4">Define os alvos em Exposição e plano</span>`}</a>
   </div>
-  <div class="row">
-    <div class="card f2">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h2 style="margin:0">Evolução da carteira</h2>
-      <div class="seg" role="group" aria-label="Período">${["1M","3M","6M","1A","Tudo"].map(p => `<button type="button" class="${periodo === p ? "on" : ""}" onclick="setPeriodo('${p}')">${p}</button>`).join("")}</div></div>
-      <div class="chartbox" style="height:260px"><canvas id="cEvol" role="img" aria-label="Gráfico da evolução do valor da carteira e do valor investido"></canvas></div>
-      <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--up)"></span>Valor da carteira</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed var(--txt3)"></span>Valor investido</span>${benchSym() ? `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dotted #6EA8FE"></span>Mesmo dinheiro no ${esc(benchNome())}</span>` : ""}<span id="evolVar" class="mono"></span></div>
-      <div id="evolKpi" class="kpis4"></div>
-    </div>
-    <div class="card f1">
-      <h2>Exposição por setor</h2>
-      ${donutBloco("cSet", ex.setores, COR_SETOR, 7)}
-      ${al[0] ? `<div class="warn">${esc(al[0])}</div>` : ""}
-      <p style="margin:10px 0 0"><a href="#exposicao" style="font-size:14px">Ver exposição completa →</a></p>
-    </div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h2 style="margin:0">Evolução da carteira</h2>
+    <div class="seg" role="group" aria-label="Período">${["1M","3M","6M","1A","Tudo"].map(p => `<button type="button" class="${periodo === p ? "on" : ""}" onclick="setPeriodo('${p}')">${p}</button>`).join("")}</div></div>
+    <div class="chartbox" style="height:260px"><canvas id="cEvol" role="img" aria-label="Gráfico da evolução do valor da carteira e do valor investido"></canvas></div>
+    <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--up)"></span>Valor da carteira</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed var(--txt3)"></span>Valor investido</span>${benchSym() ? `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dotted #6EA8FE"></span>Mesmo dinheiro no ${esc(benchNome())}</span>` : ""}<span id="evolVar" class="mono"></span></div>
+    <div id="evolKpi" class="kpis4"></div>
   </div>
-  <div class="row">
-    <div class="card f2">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h2 style="margin:0">Posições</h2><a href="#posicoes" style="font-size:14px">Ver todas</a></div>
-      ${tabelaPos(ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor).slice(0, 8), true)}
-    </div>
-    <div class="f1" style="display:flex;flex-direction:column;gap:14px;min-width:0">
-      <div class="card"><h2>Por classe de ativo</h2>${barraBloco(ex.tipos, COR_TIPO)}</div>
-      ${porCorretoraBloco()}
-      ${proximoInvBloco(ps)}
-      <div class="card" style="border-color:var(--line2)">
-        <div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>SUGESTÕES DA IA</div>
-        <p style="margin:10px 0;line-height:1.5">${S.sugestoes && S.sugestoes.resumo ? esc(S.sugestoes.resumo) : "Pede à IA ideias para diversificar a carteira, com análise técnica e fundamental dos ativos sugeridos."}</p>
-        <a class="btn sm" href="#sugestoes">${S.sugestoes ? "Ver sugestões" : "Gerar sugestões"} →</a>
-      </div>
-    </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h2 style="margin:0">Posições</h2><a href="#posicoes" style="font-size:14px">Ver todas</a></div>
+    ${tabelaPos(ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor).slice(0, 8), true)}
   </div>`;
   desenharEvol();
-  donutChart("cSet", ex.setores, COR_SETOR);
-}
-function proximoInvBloco(ps){
-  const al = alvos(); if (!Object.keys(al).length && !DIA.mes) return `<a class="card" href="#exposicao" style="text-decoration:none;color:inherit"><h2>Plano de investimento</h2><p class="muted" style="margin:0;font-size:14px;line-height:1.5">Define a distribuição alvo e a app diz-te onde investir o próximo dinheiro, sem vender nada.</p></a>`;
-  const A = valorPlano(), sug = sugerirCompras(A, al, ps);
-  return `<a class="card" href="#exposicao" style="text-decoration:none;color:inherit"><h2>Próximo investimento · ${eur(A, 0)}</h2>
-    ${DIA.mes ? `<p class="muted" style="margin:-4px 0 8px;font-size:13px">Sugerido a partir do vencimento e dos gastos do mês.</p>` : ""}
-    ${sug.length ? `<ul class="legend">${sug.slice(0, 4).map(([s, v]) => `<li><span class="tk">${esc(s)}</span><span class="mono">${eur(v, 0)}</span></li>`).join("")}</ul>` : `<p class="muted" style="margin:0;font-size:14px">Define os alvos em Exposição e plano.</p>`}</a>`;
 }
 function porCorretoraBloco(){
   const cs = corretoras(); if (cs.length < 2 || FILTRO) return "";
   const f0 = FILTRO, linhas = cs.map(c => { FILTRO = c; const t = totais(posicoes()); return [c, t]; }); FILTRO = f0;
   const tot = linhas.reduce((s, x) => s + x[1].valor, 0) || 1;
-  return `<div class="card"><h2>Por corretora</h2><ul class="legend">${linhas.map(([c, t]) => `<li style="cursor:pointer" onclick="setFiltro('${esc(c)}')"><span><span class="tk">${esc(c)}</span>&nbsp;<span class="sub">${pct(t.valor / tot)}</span></span><span class="mono">${eur(t.valor, 0)} <span class="${tone(t.ganho)}" style="font-size:12px">${pctS(t.rend)}</span></span></li>`).join("")}</ul></div>`;
+  return `<div class="card" style="margin-bottom:14px"><h2>Por corretora</h2><ul class="legend">${linhas.map(([c, t]) => `<li style="cursor:pointer" onclick="setFiltro('${esc(c)}')"><span><span class="tk">${esc(c)}</span>&nbsp;<span class="sub">${pct(t.valor / tot)}</span></span><span class="mono">${eur(t.valor, 0)} <span class="${tone(t.ganho)}" style="font-size:12px">${pctS(t.rend)}</span></span></li>`).join("")}</ul></div>`;
 }
 function setPeriodo(p){ periodo = p; store.set("cart.periodo", p); render(); }
 function desenharEvol(){
@@ -706,13 +684,13 @@ function barraBloco(itens, cores){
 }
 function tabelaPos(lista, curta){
   if (!lista.length) return `<p class="muted">Sem posições abertas.</p>`;
-  return `<div class="tbl"><table><thead><tr><th>Ativo</th>${curta ? "" : '<th>Tipo</th><th class="r">Qtd.</th><th class="r">Preço</th>'}<th class="r">Investido</th><th class="r">Valor</th><th class="r">Hoje</th><th class="r">Resultado</th></tr></thead><tbody>
+  return `<div class="tbl"><table class="${curta ? "curta" : ""}"><thead><tr><th>Ativo</th>${curta ? "" : '<th>Tipo</th><th class="r">Qtd.</th><th class="r">Preço</th>'}<th class="r nm">Investido</th><th class="r">Valor</th><th class="r nm">Hoje</th><th class="r">Resultado</th></tr></thead><tbody>
   ${lista.map(p => `<tr class="click" tabindex="0" onclick="verAtivo('${esc(p.sym)}')" onkeydown="if(event.key==='Enter')verAtivo('${esc(p.sym)}')">
     <td><div style="display:flex;flex-direction:column;gap:2px;min-width:110px"><span class="tk">${esc(p.sym)}</span><span class="sub">${esc(p.nome)}</span></div></td>
     ${curta ? "" : `<td><span class="pill" style="border-left:3px solid ${COR_TIPO[p.tipo] || "#6B7785"}">${esc(p.tipo)}</span></td><td class="r mono">${nf(p.qtd < 10 ? 4 : 2).format(p.qtd).replace(/,?0+$/, "")}</td><td class="r mono">${fmtPreco(p.precoLocal, p.moeda)}${p.sessao ? `<div class="sub">${esc(p.sessao)}</div>` : ""}</td>`}
-    <td class="r mono muted2">${eur(p.custo, 0)}</td>
+    <td class="r mono muted2 nm">${eur(p.custo, 0)}</td>
     <td class="r mono">${p.temPreco ? eur(p.valor, 0) : '<span class="muted">sem preço</span>'}</td>
-    <td class="r mono ${tone(p.varDiaPct)}">${p.temPreco ? pctS(p.varDiaPct) : ""}</td>
+    <td class="r mono nm ${tone(p.varDiaPct)}">${p.temPreco ? pctS(p.varDiaPct) : ""}</td>
     <td class="r mono ${tone(p.ganho)}" style="font-weight:600">${p.temPreco ? `${pctS(p.rend)}<div class="sub ${tone(p.ganho)}" style="font-weight:400">${eurS(p.ganho, 0)}</div>` : ""}</td>
   </tr>`).join("")}</tbody></table></div>`;
 }
@@ -726,6 +704,7 @@ function vPosicoes(m){
   m.innerHTML = `<div class="head"><h1>Posições</h1><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#exposicao"><svg class="i"><use href="#i-exp"/></svg>Exposição e plano</a><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato</button><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div></div>
   ${chipsCorretora()}
   ${avisosDados(ps)}
+  ${porCorretoraBloco()}
   <div class="card" style="margin-bottom:14px">${tabelaPos(abertas, false)}
   <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca numa posição para ver o detalhe, editar setores ou analisar.</p></div>
   ${fechadas.length ? `<div class="card" style="margin-bottom:14px"><h2>Posições fechadas</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Resultado realizado</th></tr></thead><tbody>${fechadas.map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></td><td class="r mono ${tone(p.realizado)}">${eurS(p.realizado)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
@@ -964,6 +943,7 @@ async function confirmarImport(){
 }
 
 /* ---------- DIVIDENDOS ---------- */
+let verTodosDiv = false, verTodosReg = false;
 function vDividendos(m){
   if (!vivos("ops").length) return semDados(m);
   const ps = posicoes(), t = totais(ps), pg = pagamentos();
@@ -990,12 +970,12 @@ function vDividendos(m){
   </div>
   ${porEst.length ? `<div class="card" style="margin-bottom:14px"><h2>Por confirmar (${porEst.length})</h2><p class="muted" style="font-size:13px;margin:-4px 0 10px;line-height:1.5">Pagamentos detetados no histórico do ativo, com o valor bruto estimado. Regista o valor líquido que entrou na conta, ou importa o extrato da corretora.</p>
     <div class="tbl"><table><thead><tr><th>Data ex</th><th>Ativo</th><th class="r">Unidades</th><th class="r">Por unidade</th><th class="r">Bruto estimado</th><th></th></tr></thead><tbody>
-    ${porEst.slice(0, 40).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono">${String(+x.qtd.toFixed(6)).replace(".", ",")}</td><td class="r mono">${fmtPreco(x.porUnidade, x.moeda)}</td><td class="r mono">${eur(x.bruto)}</td><td class="r"><button class="btn sm" onclick='abrirOp(null, ${esc(JSON.stringify({sym:x.sym, nome:(ativo(x.sym) || {}).nome || x.sym, data:x.data}))}, "dividendo")'>Registar</button></td></tr>`).join("")}
-    </tbody></table></div></div>` : ""}
+    ${porEst.slice(0, verTodosDiv ? 40 : 5).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono">${String(+x.qtd.toFixed(6)).replace(".", ",")}</td><td class="r mono">${fmtPreco(x.porUnidade, x.moeda)}</td><td class="r mono">${eur(x.bruto)}</td><td class="r"><button class="btn sm" onclick='abrirOp(null, ${esc(JSON.stringify({sym:x.sym, nome:(ativo(x.sym) || {}).nome || x.sym, data:x.data}))}, "dividendo")'>Registar</button></td></tr>`).join("")}
+    </tbody></table></div>${porEst.length > 5 ? `<button class="btn sm" style="margin-top:10px" onclick="verTodosDiv=!verTodosDiv;render()">${verTodosDiv ? "Mostrar só os 5 mais recentes" : `Ver todos (${porEst.length})`}</button>` : ""}</div>` : ""}
   <div class="card"><h2>Registados</h2>
     ${pg.filter(x => x.registado).length ? `<div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th class="r">Líquido</th><th class="r">Imposto retido</th><th></th></tr></thead><tbody>
-    ${pg.filter(x => x.registado).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono up">${eur(x.liquido)}</td><td class="r mono muted2">${x.imposto ? eur(x.imposto) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${x.id}')">Editar</button></td></tr>`).join("")}
-    </tbody></table></div>` : `<p class="muted">Ainda não registaste dividendos.</p>`}
+    ${pg.filter(x => x.registado).slice(0, verTodosReg ? 999 : 10).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono up">${eur(x.liquido)}</td><td class="r mono muted2">${x.imposto ? eur(x.imposto) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${x.id}')">Editar</button></td></tr>`).join("")}
+    </tbody></table></div>${pg.filter(x => x.registado).length > 10 ? `<button class="btn sm" style="margin-top:10px" onclick="verTodosReg=!verTodosReg;render()">${verTodosReg ? "Mostrar só os 10 mais recentes" : `Ver todos (${pg.filter(x => x.registado).length})`}</button>` : ""}` : `<p class="muted">Ainda não registaste dividendos.</p>`}
   </div>
   <p class="muted" style="font-size:12.5px;margin-top:14px;line-height:1.5">A previsão usa os dividendos pagos nos últimos 12 meses multiplicados pelas unidades que tens hoje, antes de impostos. Em Portugal os dividendos pagam normalmente 28% de IRS, além do imposto retido no país de origem.</p>`;
   const meses = []; const d0 = new Date(); d0.setDate(1);
@@ -1352,8 +1332,9 @@ function vExposicao(m){
   ${chipsCorretora()}
   ${exposicaoRealBloco(ps)}
   ${planoBloco(ps)}
-  ${al.length ? `<div class="card" style="margin-bottom:14px"><h2>Pontos de atenção</h2>${al.map(a => `<div class="warn">${esc(a)}</div>`).join("")}</div>` : ""}
-  <div class="row">
+  <details class="mais" ${store.get("cart.maisExp", false) ? "open" : ""} ontoggle="store.set('cart.maisExp', this.open); if (this.open) desenharExpDetalhe()">
+  <summary>Ver mais detalhe: setores, ativos, classes e moedas</summary>
+  <div class="row" style="margin-top:14px">
     <div class="card f1"><h2>Setores</h2>${donutBloco("cSet2", ex.setores, COR_SETOR, 14)}<p class="muted" style="font-size:12.5px;margin:12px 0 0">Nos ETFs, cada setor conta pela parte do ETF que lá está investida.</p></div>
     <div class="card f1"><h2>Ativos</h2>${donutBloco("cAt", ex.ativos.map(a => [a[0], a[1]]), cores, 10)}</div>
   </div>
@@ -1363,9 +1344,10 @@ function vExposicao(m){
   </div>
   <div class="card"><h2>Setores por posição</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Peso</th><th>Setores</th></tr></thead><tbody>
   ${ps.filter(p => p.qtd > 0 && p.temPreco).sort((a, b) => b.valor - a.valor).map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.tipo)}</span></td><td class="r mono">${pct(p.valor / ex.total)}</td><td><div class="bar" style="min-width:160px">${Object.entries(p.setores).sort((a, b) => b[1] - a[1]).map(([s, v]) => `<div title="${esc(s)} ${v}%" style="width:${v}%;background:${COR_SETOR[s] || "#6B7785"}"></div>`).join("")}</div><div class="sub" style="margin-top:4px">${Object.entries(p.setores).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, v]) => `${esc(s)} ${NF0.format(v)}%`).join(" · ")}</div></td></tr>`).join("")}
-  </tbody></table></div></div>`;
-  donutChart("cSet2", ex.setores, COR_SETOR);
-  donutChart("cAt", ex.ativos.map(a => [a[0], a[1]]), cores);
+  </tbody></table></div></div>
+  </details>`;
+  window.desenharExpDetalhe = () => { donutChart("cSet2", ex.setores, COR_SETOR); donutChart("cAt", ex.ativos.map(a => [a[0], a[1]]), cores); };
+  if (store.get("cart.maisExp", false)) desenharExpDetalhe();
 }
 
 /* ---------- ANÁLISE ---------- */
