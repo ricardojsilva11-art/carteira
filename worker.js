@@ -311,6 +311,26 @@ As percentagens somam 100 e são números. Para um ETF usa a composição setori
   return res;
 }
 
+/* ---------- formato fixo das respostas da IA ----------
+   Resumo / Pontos positivos / Riscos / O que acompanhar / Sugestão,
+   cada frase marcada como facto, histórico, estimativa, opinião ou recomendação. */
+const PARECER_JSON = `"parecer":{"resumo":"2 frases no máximo, com o essencial",
+  "positivos":[{"t":"frase curta","tipo":"facto|historico|estimativa|opiniao"}],
+  "riscos":[{"t":"frase curta","tipo":"facto|historico|estimativa|opiniao"}],
+  "acompanhar":[{"t":"frase curta: o quê e quando (data, se existir)","tipo":"facto|estimativa"}],
+  "sugestao":{"t":"1-2 frases","tipo":"recomendacao"}}`;
+const PARECER_REGRAS = `Formato do "parecer": 2 a 4 itens por lista, cada frase com até 20 palavras, sem repetir o mesmo ponto em listas diferentes.
+Marca cada frase com o tipo certo: "facto" = dado atual verificável (preço, resultado publicado, TER, data marcada); "historico" = o que aconteceu no passado (rentabilidades, máximos, tendências passadas); "estimativa" = previsão, projeção ou consenso de analistas (diz de quem); "opiniao" = a tua interpretação; "recomendacao" = só na sugestão.
+A sugestão é uma orientação prudente ("considerar…", "manter o peso abaixo de…", "rever quando…"), nunca uma ordem de compra ou venda, e deve encaixar no perfil e na carteira do investidor quando os conheceres. Não inventes números: se não encontrares, não escrevas o item.`;
+const TIPOS_FRASE = ["facto", "historico", "estimativa", "opiniao", "recomendacao"];
+function normParecer(p){
+  if (!p || typeof p !== "object") return null;
+  const fr = x => { if (!x) return null; if (typeof x === "string") return {t:x.slice(0, 400), tipo:"opiniao"}; const t = String(x.t || x.texto || "").slice(0, 400); if (!t) return null; const tp = String(x.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); return {t, tipo:TIPOS_FRASE.includes(tp) ? tp : "opiniao"}; };
+  const lista = a => (Array.isArray(a) ? a : []).map(fr).filter(Boolean).slice(0, 5);
+  const s = fr(p.sugestao);
+  return {resumo:String(p.resumo || "").slice(0, 600), positivos:lista(p.positivos), riscos:lista(p.riscos), acompanhar:lista(p.acompanhar), sugestao:s ? Object.assign(s, {tipo:"recomendacao"}) : null};
+}
+
 async function analisar(env, key, body){
   const sym = String(body.sym || "").trim();
   if (!symOk(sym)) throw err("Símbolo inválido.", 400);
@@ -322,25 +342,25 @@ async function analisar(env, key, body){
   const system = `És um analista financeiro que escreve para um investidor particular em Portugal (português europeu, claro e direto, sem jargão desnecessário).
 Recebes indicadores técnicos já calculados pela app e pesquisas na web por dados fundamentais recentes e opiniões de sites de análise (relatórios de resultados, Morningstar, Seeking Alpha, Reuters, sites do emitente, etc.).
 Responde APENAS com JSON:
-{"resumo":"2-3 frases com a leitura geral",
+{${PARECER_JSON},
  "sinalTecnico":"positivo|neutro|negativo",
  "sinalFundamental":"positivo|neutro|negativo",
- "tecnica":"3-5 frases a interpretar tendência, médias móveis, RSI, MACD, suportes e resistências",
+ "tecnica":"2-3 frases a interpretar tendência, médias móveis, RSI, MACD, suportes e resistências",
  "metricas":[{"nome":"P/E","valor":"texto com unidade","nota":"curta: barato/caro face ao setor, etc."}],
- "fundamental":"3-5 frases: crescimento, rentabilidade, dívida, avaliação, dividendos (para ETFs: custos, composição, replicação; para cripto: adoção, oferta, riscos)",
- "consenso":"o que dizem os analistas/sites (preço-alvo médio e recomendação, se existirem)",
- "riscos":["risco curto"],
- "oportunidades":["ponto curto"]${isETF ? `,
+ "fundamental":"2-3 frases: crescimento, rentabilidade, dívida, avaliação, dividendos (para ETFs: custos, composição, replicação; para cripto: adoção, oferta, riscos)",
+ "consenso":"1 frase: o que dizem os analistas (preço-alvo médio e recomendação, com a fonte), se existirem"${isETF ? `,
  "justetf":{"url":"endereço da página do ETF no justETF","isin":"","nome":"","indice":"índice replicado","ter":"custo anual %","tamanho":"tamanho do fundo em milhões €","replicacao":"física (completa/amostragem) ou sintética","distribuicao":"acumulação ou distribuição (e frequência)","domicilio":"país","dataLancamento":"","nPosicoes":"","rentabilidade":{"1a":"%","3a":"%","5a":"%"},"volatilidade1a":"%","nota":"1 frase com o que o justETF destaca (ex.: classificação, alternativas mais baratas no mesmo índice)"}` : ""}}
-Regras: usa só números que encontraste ou que te foram dados; se não encontrares, escreve "n/d"; 4 a 8 métricas adequadas ao tipo de ativo; não dês ordens de compra ou venda, descreve o cenário.${isETF ? `
+${PARECER_REGRAS}
+Regras: usa só números que encontraste ou que te foram dados; se não encontrares, escreve "n/d"; 4 a 8 métricas adequadas ao tipo de ativo; se receberes a posição do investidor, tem-na em conta na sugestão.${isETF ? `
 Este ativo é um ETF: é OBRIGATÓRIO ler a página do ETF no justETF (justetf.com) com a ferramenta web_fetch. Se te for dado o endereço, abre-o diretamente; senão pesquisa «justETF <nome ou ticker> ISIN» e abre a página "etf-profile" do resultado. Usa os dados do justETF no objeto "justetf", nas métricas (TER, tamanho, replicação, distribuição, rentabilidades) e na leitura fundamental. Se o justETF não abrir, preenche "justetf" com "n/d" e explica na nota.` : ""}`;
   const prompt = `Ativo: ${sym} — ${String(body.nome || "").slice(0, 120)} (${String(body.tipo || "")}). Moeda: ${String(body.moeda || "")}.
 Indicadores técnicos calculados pela app (JSON): ${JSON.stringify(body.ind || {}).slice(0, 4000)}
 Posição do investidor neste ativo (JSON, pode estar vazia): ${JSON.stringify(body.posicao || {}).slice(0, 1000)}
 ${isETF && isin ? `Página do ETF no justETF: https://www.justetf.com/pt/etf-profile.html?isin=${isin}\n` : ""}Hoje é ${lisbonDay()}.`;
   const {out, fontes} = await claude(env, system, prompt, isETF ? {maxTokens:5000, searches:4, fetches:2, fetchDomains:["justetf.com"]} : {maxTokens:4000, searches:4});
-  const res = {sym, quando:Date.now(), resumo:String(out.resumo || ""), sinalTecnico:out.sinalTecnico || "neutro", sinalFundamental:out.sinalFundamental || "neutro", tecnica:String(out.tecnica || ""),
-    metricas:(out.metricas || []).slice(0, 10), fundamental:String(out.fundamental || ""), consenso:String(out.consenso || ""), riscos:(out.riscos || []).slice(0, 6), oportunidades:(out.oportunidades || []).slice(0, 6), fontes:fontes.slice(0, 10), justetf:isETF && out.justetf && typeof out.justetf === "object" ? out.justetf : null};
+  const par = normParecer(out.parecer);
+  const res = {sym, quando:Date.now(), v:2, parecer:par, resumo:par ? par.resumo : String(out.resumo || ""), sinalTecnico:out.sinalTecnico || "neutro", sinalFundamental:out.sinalFundamental || "neutro", tecnica:String(out.tecnica || ""),
+    metricas:(out.metricas || []).slice(0, 10), fundamental:String(out.fundamental || ""), consenso:String(out.consenso || ""), fontes:fontes.slice(0, 10), justetf:isETF && out.justetf && typeof out.justetf === "object" ? out.justetf : null};
   await cachePut(env, ck, res);
   return res;
 }
@@ -350,16 +370,18 @@ async function sugestoes(env, key, body){
   const system = `És um consultor de investimentos que escreve para um investidor particular em Portugal (português europeu).
 Recebes a composição da carteira (pesos por ativo, classe e setor) e o perfil do investidor. Pesquisa na web análises recentes de ações, ETFs, REITs e cripto em sites de análise e notícias financeiras, e propõe ideias para melhorar a carteira (diversificação, concentração, custos, setores em falta, oportunidades).
 Responde APENAS com JSON:
-{"resumo":"2-3 frases sobre o estado da carteira",
- "alertas":[{"titulo":"curto","detalhe":"1-2 frases"}],
- "ideias":[{"titulo":"curto","isin":"ISIN (obrigatório nos ETFs)","ter":"custo anual % (ETFs)","justetf":"endereço da página no justETF (ETFs)","sym":"símbolo do Yahoo Finance (ex.: VWCE.DE, AAPL, O, BTC-EUR, IWDA.AS)","nome":"nome do ativo","tipo":"Ação|ETF|REIT|Cripto|Obrigações","porque":"2-3 frases concretas ligadas à carteira","tecnica":"1 frase sobre o gráfico","fundamental":"1 frase com dados","risco":"baixo|médio|alto","confianca":número 0-100,"efeito":"o que muda na carteira (ex.: Tecnologia de 41% para 36%)"}]}
+{${PARECER_JSON},
+ "ideias":[{"titulo":"curto","isin":"ISIN (obrigatório nos ETFs)","ter":"custo anual % (ETFs)","justetf":"endereço da página no justETF (ETFs)","sym":"símbolo do Yahoo Finance (ex.: VWCE.DE, AAPL, O, BTC-EUR, IWDA.AS)","nome":"nome do ativo","tipo":"Ação|ETF|REIT|Cripto|Obrigações","porque":"1-2 frases concretas ligadas à carteira (é uma recomendação)","tecnica":"1 frase sobre o gráfico (histórico)","fundamental":"1 frase com dados (factos, com a fonte)","risco":"baixo|médio|alto","confianca":número 0-100,"efeito":"o que muda na carteira (ex.: Tecnologia de 41% para 36%)"}]}
 Para cada ETF sugerido é OBRIGATÓRIO confirmar os dados na página do justETF (justetf.com) com a ferramenta web_fetch: ISIN, TER, tamanho, replicação, distribuição e rentabilidade; usa o justETF também para comparar alternativas ao mesmo índice e escolher a mais barata e líquida.
-Regras: 4 a 6 ideias diferentes; prefere ativos acessíveis a um investidor europeu (ETFs UCITS em bolsas europeias quando for ETF); respeita o perfil de risco; não inventes números; não garantas rentabilidades; descreve, não ordenes.`;
+No "parecer": resumo do estado da carteira; positivos e riscos da carteira atual (concentração, custos, setores, moedas); o que acompanhar; a sugestão é a ideia principal numa frase.
+${PARECER_REGRAS}
+Regras: 3 a 5 ideias diferentes; prefere ativos acessíveis a um investidor europeu (ETFs UCITS em bolsas europeias quando for ETF); respeita o perfil de risco; não inventes números; não garantas rentabilidades; descreve, não ordenes.`;
   const prompt = `Carteira (JSON): ${JSON.stringify(body.carteira || {}).slice(0, 20000)}
 Perfil do investidor: ${JSON.stringify(body.perfil || {}).slice(0, 500)}
 Hoje é ${lisbonDay()}.`;
   const {out, fontes} = await claude(env, system, prompt, {maxTokens:10000, searches:5, fetches:4, fetchDomains:["justetf.com"]});
-  return {quando:Date.now(), upd:Date.now(), resumo:String(out.resumo || ""), alertas:(out.alertas || []).slice(0, 6), ideias:(out.ideias || []).slice(0, 8), fontes:fontes.slice(0, 12)};
+  const par = normParecer(out.parecer);
+  return {quando:Date.now(), upd:Date.now(), v:2, parecer:par, resumo:par ? par.resumo : String(out.resumo || ""), alertas:[], ideias:(out.ideias || []).slice(0, 6), fontes:fontes.slice(0, 12)};
 }
 
 /* ---------- importar extrato da corretora ---------- */
@@ -619,10 +641,13 @@ async function projecaoIA(env, key, body){
   const system = `És um consultor financeiro que explica, a um investidor particular em Portugal (português europeu, claro e sem jargão), uma projeção do crescimento da sua carteira.
 Recebes os números já calculados pela app: pesos, histórico de cada ativo (rentabilidade anual e volatilidade), o retorno esperado usado, a simulação (pessimista/provável/otimista) e o teste com os últimos anos. Pesquisa as previsões de longo prazo mais recentes das grandes gestoras (Vanguard, J.P. Morgan, BlackRock, Morningstar) para ações globais e dos EUA, e compara.
 Se vierem dados "fire" (independência financeira), comenta também se o objetivo e a taxa de levantamento são realistas para alguém em Portugal e o que mais encurtaria o prazo.
-Responde APENAS com JSON: {"resumo":"3-4 frases: o que esperar, em números redondos (inclui o ano provável de independência financeira, se houver)","realismo":"1-2 frases: os pressupostos são prudentes, razoáveis ou otimistas face às previsões das gestoras (cita os números)","pontos":["frase curta"],"riscos":["frase curta"],"melhorar":["frase curta: o que mudaria a projeção para melhor (custos, diversificação, investimento mensal, tempo)"]}
-Regras: 3 a 5 itens por lista; usa só os números dados e os que encontrares; lembra que o passado não garante o futuro, sem repetir avisos; não dês ordens de compra ou venda.`;
+Responde APENAS com JSON: {${PARECER_JSON},"realismo":"1-2 frases: os pressupostos são prudentes, razoáveis ou otimistas face às previsões das gestoras (cita os números; é uma estimativa)"}
+No "parecer": o resumo diz o que esperar em números redondos (e o ano provável de independência financeira, se houver); "positivos" = o que ajuda a projeção; "riscos" = o que a pode estragar; "acompanhar" = o que rever ao longo do tempo; a sugestão = o que mais melhoraria o resultado (custos, diversificação, investimento mensal, tempo).
+${PARECER_REGRAS}
+Regras: usa só os números dados e os que encontrares; os valores da simulação são estimativas, o histórico é histórico; lembra que o passado não garante o futuro, sem repetir avisos.`;
   const {out, fontes} = await claude(env, system, `Dados da projeção (JSON): ${JSON.stringify(body.dados || {}).slice(0, 12000)}\nHoje é ${lisbonDay()}.`, {maxTokens:3000, searches:3});
-  return {quando:Date.now(), resumo:String(out.resumo || ""), realismo:String(out.realismo || ""), pontos:(out.pontos || []).slice(0, 6), riscos:(out.riscos || []).slice(0, 6), melhorar:(out.melhorar || []).slice(0, 6), fontes:fontes.slice(0, 8)};
+  const par = normParecer(out.parecer);
+  return {quando:Date.now(), v:2, parecer:par, resumo:par ? par.resumo : String(out.resumo || ""), realismo:String(out.realismo || ""), fontes:fontes.slice(0, 8)};
 }
 
 /* ============================================================
@@ -630,7 +655,7 @@ Regras: 3 a 5 itens por lista; usa só os números dados e os que encontrares; l
    ============================================================ */
 function quantidades(st){
   const q = {};
-  (st.ops || []).filter(o => o && !o.del && o.tipo !== "dividendo").sort((a, b) => String(a.data).localeCompare(String(b.data))).forEach(o => {
+  (st.ops || []).filter(o => o && !o.del && o.sym && (o.tipo === "compra" || o.tipo === "venda")).sort((a, b) => String(a.data).localeCompare(String(b.data))).forEach(o => {
     q[o.sym] = q[o.sym] || 0;
     q[o.sym] = o.tipo === "venda" ? Math.max(0, q[o.sym] - (+o.qtd || 0)) : q[o.sym] + (+o.qtd || 0);
   });
@@ -690,8 +715,10 @@ async function resumoSemanal(env, key, st, viaCron){
     try{
       const system = `Escreves o resumo semanal da carteira de investimentos de um investidor particular em Portugal (português europeu, tom claro e próximo, sem jargão).
 Recebes as posições com peso e variação da semana. Pesquisa as notícias mais relevantes da semana sobre as maiores posições (resultados, guidance, decisões de bancos centrais que as afetem).
-Responde APENAS com JSON: {"titulo":"frase curta (máx. 70 caracteres) para a notificação","resumo":"3-4 frases com o essencial da semana","destaques":[{"ativo":"","texto":"1 frase: o que aconteceu e porquê"}],"atencao":["ponto curto a vigiar na próxima semana (ex.: resultados de X na quinta)"]}
-Regras: 3 a 5 destaques; usa só factos que encontraste; não dês ordens de compra ou venda.`;
+Responde APENAS com JSON: {"titulo":"frase curta (máx. 70 caracteres) para a notificação",${PARECER_JSON},"destaques":[{"ativo":"","texto":"1 frase: o que aconteceu e porquê","tipo":"facto|opiniao"}]}
+No "parecer": o resumo é o essencial da semana; positivos e riscos da semana; "acompanhar" = o que vigiar na próxima semana (ex.: resultados de X na quinta); a sugestão é curta e prudente (pode ser "nada a fazer").
+${PARECER_REGRAS}
+Regras: 2 a 4 destaques; usa só factos que encontraste.`;
       const r = await claude(env, system, `Semana até ${lisboaDia()}. Valor da carteira: ${eurTxt(tot)} (${pctTxt(varSem)} na semana).\nPosições (JSON): ${JSON.stringify(dados).slice(0, 6000)}`, {maxTokens:2500, searches:3});
       ia = r.out; fontes = r.fontes.slice(0, 8);
     }catch(e){ ia = null; }
@@ -700,7 +727,8 @@ Regras: 3 a 5 destaques; usa só factos que encontraste; não dês ordens de com
   const res = {id:lisboaDia(), upd:Date.now(), quando:Date.now(), valor:Math.round(tot * 100) / 100, varSemana:varSem, variacaoEUR:Math.round((tot - ini) * 100) / 100,
     melhor:melhor[0] || null, pior:melhor.length > 1 ? melhor[melhor.length - 1] : null,
     titulo:ia && ia.titulo ? String(ia.titulo).slice(0, 90) : `Carteira ${pctTxt(varSem)} esta semana`,
-    resumo:ia ? String(ia.resumo || "") : "", destaques:ia && Array.isArray(ia.destaques) ? ia.destaques.slice(0, 6) : [], atencao:ia && Array.isArray(ia.atencao) ? ia.atencao.slice(0, 5) : [], fontes};
+    v:2, parecer:ia ? normParecer(ia.parecer) : null,
+    resumo:ia ? String((ia.parecer && ia.parecer.resumo) || ia.resumo || "") : "", destaques:ia && Array.isArray(ia.destaques) ? ia.destaques.slice(0, 5) : [], atencao:[], fontes};
   st.resumos = (st.resumos || []).filter(x => x.id !== res.id).concat(res).sort((a, b) => String(a.id).localeCompare(String(b.id))).slice(-8);
   await putVal(env, key, st);
   return res;

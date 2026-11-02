@@ -97,6 +97,12 @@ td{padding:11px 6px;border-top:1px solid var(--line);vertical-align:middle}
 td.r,th.r{text-align:right}
 tr.click{cursor:pointer} tr.click:hover td{background:var(--card2)}
 .tk{font-weight:600}.sub{font-size:12px;color:var(--txt3)}
+.presumo{line-height:1.55;margin:10px 0;font-size:15px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 20px;margin-top:6px}
+.pc .pt,.psug .pt{font-size:12px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 4px}
+.pc ul{margin:0;padding:0;list-style:none}.pc li{font-size:14px;line-height:1.5;padding:5px 0;border-top:1px solid var(--line)}.pc li:first-child{border-top:0}
+.psug{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg2,rgba(127,127,127,.08));font-size:14.5px;line-height:1.5}
+.tfr{display:inline-block;font-size:10.5px;font-weight:600;line-height:1;padding:3px 6px;margin:0 6px 1px 0;border-radius:999px;border:1px solid var(--c);color:var(--txt2);vertical-align:1px;white-space:nowrap}
 .ficha{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px}.ficha .fl{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}.ficha .fl>span:last-child{text-align:right}
 @media (max-width:600px){.ficha{grid-template-columns:1fr}}
 th.ord button{all:unset;cursor:pointer;font:inherit;color:inherit}th.ord button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:3px}
@@ -1445,8 +1451,7 @@ function projecaoBloco(ps){
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>COMENTÁRIO DA IA${ia && ia.quando ? " · " + new Date(ia.quando).toLocaleDateString("pt-PT") : ""}</div>
       ${PEND.proj ? `<button class="btn sm" disabled><span class="spin" aria-hidden="true"></span> A analisar… <span data-t0="${PEND.proj}">${tempoTxt(PEND.proj)}</span></button>` : `<button class="btn sm" onclick="pedirProjIA()">${ia ? "Atualizar comentário" : "Pedir comentário da IA"}</button>`}</div>
-      ${ia ? `<p style="line-height:1.55;margin:10px 0 6px">${esc(ia.resumo)}</p>${ia.realismo ? `<p class="muted2" style="line-height:1.55;margin:0 0 8px;font-size:14px">${esc(ia.realismo)}</p>` : ""}
-        <div class="row" style="margin:0;gap:18px">${[["A reter", ia.pontos], ["Riscos", ia.riscos], ["Para melhorar", ia.melhorar]].filter(x => (x[1] || []).length).map(([t, l]) => `<div style="flex:1 1 220px;min-width:0"><div class="lab" style="font-size:12px;font-weight:600;color:var(--txt3);margin-bottom:4px">${t}</div><ul style="margin:0;padding-left:18px;line-height:1.55;font-size:14px">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div>
+      ${ia ? `${parecerBloco(ia.parecer || Object.assign(parecerDe(ia), {acompanhar:(ia.melhorar || []).map(t => ({t:String(t), tipo:""}))}), ia.realismo ? `<p class="muted2" style="line-height:1.55;margin:0 0 8px;font-size:14px">${tagFrase(ia.v ? "estimativa" : "")}${esc(ia.realismo)}</p>` : "")}
         ${(ia.fontes || []).length ? `<div class="srcs" style="margin-top:8px">${ia.fontes.slice(0, 5).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div>` : ""}`
       : `<p class="muted" style="font-size:13px;margin:8px 0 0">A IA interpreta estes números e compara-os com as previsões de longo prazo das grandes gestoras.</p>`}
     </div>
@@ -1655,9 +1660,7 @@ function resumoBloco(){
     ${PEND.res ? `<button class="btn sm" disabled><span class="spin" aria-hidden="true"></span> A preparar… <span data-t0="${PEND.res}">${tempoTxt(PEND.res)}</span></button>` : `<button class="btn sm" onclick="pedirResumo()">Gerar agora</button>`}</div></div>
     ${r ? `<h3 style="margin:12px 0 4px;font-size:18px">${esc(r.titulo)}</h3>
       <p class="mono" style="margin:0 0 10px"><span>${eur(r.valor)}</span> · <span class="${tone(r.varSemana)}">${pctS(r.varSemana)} (${eurS(r.variacaoEUR)})</span>${r.melhor ? ` · melhor: <span class="tk">${esc(r.melhor.ativo)}</span> <span class="${tone(r.melhor.semanaPct)}">${pctS(r.melhor.semanaPct / 100)}</span>` : ""}${r.pior ? ` · pior: <span class="tk">${esc(r.pior.ativo)}</span> <span class="${tone(r.pior.semanaPct)}">${pctS(r.pior.semanaPct / 100)}</span>` : ""}</p>
-      ${r.resumo ? `<p style="line-height:1.55;margin:0 0 10px">${esc(r.resumo)}</p>` : ""}
-      ${(r.destaques || []).length ? `<ul style="margin:0 0 10px;padding-left:18px;line-height:1.6">${r.destaques.map(d => `<li><span class="tk">${esc(d.ativo)}</span> — ${esc(d.texto)}</li>`).join("")}</ul>` : ""}
-      ${(r.atencao || []).length ? `<div class="warn" style="margin:0 0 10px"><strong>Na próxima semana:</strong> ${r.atencao.map(esc).join(" · ")}</div>` : ""}
+      ${r.parecer || r.resumo ? parecerBloco(parecerDe(r), (r.destaques || []).length ? `<div class="pc"><div class="pt">Destaques da semana</div><ul>${r.destaques.map(d => `<li>${tagFrase(r.v ? (d.tipo === "opiniao" ? "opiniao" : "facto") : "")}<span class="tk">${esc(d.ativo)}</span> — ${esc(d.texto)}</li>`).join("")}</ul></div>` : "", true) : ""}
       ${(r.fontes || []).length ? `<div class="srcs">${r.fontes.slice(0, 6).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div>` : ""}`
     : `<p class="muted" style="margin:10px 0 0;line-height:1.5">Todos os domingos às ${esc(notifCfg().resumoHora)} a IA faz o resumo da semana: como correu a carteira, as notícias das tuas maiores posições e o que vigiar a seguir${NOTIF.ligado ? "" : " (liga as notificações em Ajustes para o receberes no telemóvel)"}.</p>`}
   </div>`;
@@ -1816,6 +1819,24 @@ function justetfBloco(j){
     ${j.nota ? `<p class="muted2" style="font-size:13.5px;line-height:1.5;margin:12px 0 0">${esc(j.nota)}</p>` : ""}</div>`;
 }
 function sinalPill(s, rot){ return `<span class="pill ${s === "positivo" ? "up" : s === "negativo" ? "down" : ""}">${rot}: ${esc(s || "neutro")}</span>`; }
+/* ---------- formato fixo das respostas da IA ---------- */
+const TIPO_FRASE = {facto:["Facto", "#4FC1B0"], historico:["Histórico", "#9DB4FF"], estimativa:["Estimativa", "#E8D36A"], opiniao:["Opinião", "#F2A65A"], recomendacao:["Recomendação", "#B48CF2"]};
+const tagFrase = tp => TIPO_FRASE[tp] ? `<span class="tfr" style="--c:${TIPO_FRASE[tp][1]}">${TIPO_FRASE[tp][0]}</span>` : "";
+/* respostas antigas (antes do formato fixo) passam a ter a mesma forma, sem classificação */
+function parecerDe(x){
+  if (!x) return null;
+  if (x.parecer) return x.parecer;
+  const l = a => (a || []).map(t => ({t:String(t), tipo:""}));
+  return {resumo:x.resumo || "", positivos:l(x.oportunidades || x.pontos), riscos:l(x.riscos), acompanhar:l(x.atencao), sugestao:null, antigo:true};
+}
+function parecerBloco(p, extra, semLegenda){
+  if (!p) return "";
+  const lista = (tit, a) => (a || []).length ? `<div class="pc"><div class="pt">${tit}</div><ul>${a.map(x => `<li>${tagFrase(x.tipo)}${esc(x.t)}</li>`).join("")}</ul></div>` : "";
+  return `${p.resumo ? `<p class="presumo">${esc(p.resumo)}</p>` : ""}${extra || ""}
+    <div class="pgrid">${lista("Pontos positivos", p.positivos)}${lista("Riscos", p.riscos)}${lista("O que acompanhar", p.acompanhar)}</div>
+    ${p.sugestao && p.sugestao.t ? `<div class="psug"><div class="pt">Sugestão</div>${tagFrase("recomendacao")}${esc(p.sugestao.t)}</div>` : ""}
+    ${p.antigo ? `<p class="muted" style="font-size:12px;margin:8px 0 0">Resposta no formato antigo. Atualiza para teres o formato novo.</p>` : semLegenda ? "" : `<p class="muted" style="font-size:11.5px;margin:8px 0 0;line-height:1.5">Facto = dado atual verificável · Histórico = o que já aconteceu · Estimativa = previsão (não garantida) · Opinião = leitura da IA · Recomendação = orientação, nunca uma ordem.</p>`}`;
+}
 function iaBloco(sym, ia){
   if (!ia) return `<div class="card" style="border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>ANÁLISE COM IA</div>
     <p style="line-height:1.55;margin:10px 0">A IA pesquisa dados fundamentais recentes e opiniões de sites de análise, junta os indicadores técnicos deste gráfico e escreve uma leitura do ativo.</p>
@@ -1823,15 +1844,13 @@ function iaBloco(sym, ia){
     ${ERRO.an[sym] && !PEND.an[sym] ? `<div class="warn">${esc(ERRO.an[sym])}</div>` : ""}
     <p class="muted" style="font-size:12px;margin:10px 0 0">Demora 1 a 2 minutos (nos ETFs também lê o justETF). Podes mudar de ecrã entretanto.</p></div>`;
   return `<div class="card" style="border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>ANÁLISE COM IA · ${new Date(ia.quando).toLocaleDateString("pt-PT")}</div>
-    <p style="line-height:1.55;margin:10px 0;font-size:15px">${esc(ia.resumo)}</p>
-    <div class="chips">${sinalPill(ia.sinalTecnico, "Técnica")}${sinalPill(ia.sinalFundamental, "Fundamental")}</div></div>
+    ${parecerBloco(parecerDe(ia), `<div class="chips" style="margin:0 0 4px">${sinalPill(ia.sinalTecnico, "Técnica")}${sinalPill(ia.sinalFundamental, "Fundamental")}</div>`)}</div>
   ${justetfBloco(ia.justetf)}
-  ${ia.metricas && ia.metricas.length ? `<div class="card"><h2>Fundamentais</h2><div class="metrics">${ia.metricas.map(x => `<div><span class="n">${esc(x.nome)}</span><span class="v mono">${esc(x.valor)}</span><span class="sub">${esc(x.nota || "")}</span></div>`).join("")}</div></div>` : ""}
-  <div class="card prose"><h2>Leitura fundamental</h2><p>${esc(ia.fundamental)}</p>${ia.consenso ? `<p><strong>Consenso:</strong> ${esc(ia.consenso)}</p>` : ""}
+  ${ia.metricas && ia.metricas.length ? `<div class="card"><h2>Fundamentais <span class="sub" style="font-weight:400">· dados recolhidos pela IA</span></h2><div class="metrics">${ia.metricas.map(x => `<div><span class="n">${esc(x.nome)}</span><span class="v mono">${esc(x.valor)}</span><span class="sub">${esc(x.nota || "")}</span></div>`).join("")}</div></div>` : ""}
+  <details class="mais"><summary>Leitura técnica e fundamental${ia.fontes && ia.fontes.length ? ` · ${ia.fontes.length} fontes` : ""}</summary><div class="prose" style="margin-top:12px">
+  <h2>Leitura fundamental</h2><p>${esc(ia.fundamental)}</p>${ia.consenso ? `<p>${tagFrase(ia.v ? "estimativa" : "")}<strong>Consenso:</strong> ${esc(ia.consenso)}</p>` : ""}
   <h2 style="margin-top:14px">Leitura técnica</h2><p>${esc(ia.tecnica)}</p>
-  ${ia.oportunidades && ia.oportunidades.length ? `<h2 style="margin-top:14px">A favor</h2><ul style="margin:0 0 10px;padding-left:18px;line-height:1.6">${ia.oportunidades.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-  ${ia.riscos && ia.riscos.length ? `<h2 style="margin-top:14px">Riscos</h2><ul style="margin:0;padding-left:18px;line-height:1.6">${ia.riscos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>
-  ${ia.fontes && ia.fontes.length ? `<div class="card"><h2>Fontes consultadas</h2><div class="srcs">${ia.fontes.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div></div>` : ""}
+  ${ia.fontes && ia.fontes.length ? `<h2 style="margin-top:14px">Fontes consultadas</h2><div class="srcs">${ia.fontes.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div>` : ""}</div></details>
   ${PEND.an[sym] ? `<button class="btn" disabled><span class="spin" aria-hidden="true"></span> A atualizar… <span data-t0="${PEND.an[sym]}">${tempoTxt(PEND.an[sym])}</span></button>` : `<button class="btn" id="iaBtn" onclick="pedirAnalise('${esc(sym)}', true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar análise</button>`}
   ${ERRO.an[sym] && !PEND.an[sym] ? `<div class="warn">${esc(ERRO.an[sym])}</div>` : ""}
   <p class="muted" style="font-size:12px;margin:0">Análise automática a partir de fontes públicas. Não é aconselhamento financeiro.</p>`;
@@ -1869,16 +1888,18 @@ function vSugestoes(m){
     ${ERRO.sug && !PEND.sug ? `<div class="warn" style="margin:0"><strong>Não foi possível gerar as sugestões.</strong> ${esc(ERRO.sug)}</div>` : ""}
   </div>
   ${sg ? `
-  <div class="card" style="margin-bottom:14px;border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>RESUMO · ${new Date(sg.quando).toLocaleDateString("pt-PT")}</div><p style="line-height:1.55;margin:10px 0 0;font-size:15px">${esc(sg.resumo)}</p>
+  <div class="card" style="margin-bottom:14px;border-color:var(--line2)"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>A TUA CARTEIRA · ${new Date(sg.quando).toLocaleDateString("pt-PT")}</div>
+  ${parecerBloco(parecerDe(sg))}
   ${(sg.alertas || []).map(a => `<div class="warn"><strong>${esc(a.titulo)}.</strong> ${esc(a.detalhe)}</div>`).join("")}</div>
+  ${(sg.ideias || []).length ? `<h2 style="margin:0 0 10px">Ideias para estudar</h2>` : ""}
   <div class="ideas">${(sg.ideias || []).map((x, i) => `<article class="card idea">
     <div class="t"><div><div style="font-size:16px;font-weight:600">${esc(x.titulo)}</div><div class="sub">${esc(x.sym)} · ${esc(x.nome)}</div></div><span class="pill" style="border-left:3px solid ${COR_TIPO[x.tipo] || "#6B7785"}">${esc(x.tipo)}</span></div>
-    <p style="margin:0;font-size:14px;line-height:1.5" class="muted2">${esc(x.porque)}</p>
+    <p style="margin:0;font-size:14px;line-height:1.5" class="muted2">${tagFrase(sg.v ? "recomendacao" : "")}${esc(x.porque)}</p>
     ${x.efeito ? `<p style="margin:0;font-size:13px"><strong>Na carteira:</strong> ${esc(x.efeito)}</p>` : ""}
     ${x.tipo === "ETF" && (x.isin || x.ter) ? `<p style="margin:0;font-size:13px"><strong>justETF:</strong> ${x.isin ? "ISIN " + esc(x.isin) : ""}${x.ter ? " · TER " + esc(x.ter) : ""}${/^https:\/\/(www\.)?justetf\.com\//.test(x.justetf || "") || /^[A-Z]{2}[A-Z0-9]{10}$/.test(x.isin || "") ? ` · <a href="${esc(/^https:\/\/(www\.)?justetf\.com\//.test(x.justetf || "") ? x.justetf : "https://www.justetf.com/pt/etf-profile.html?isin=" + x.isin)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</p>` : ""}
-    ${x.tecnica ? `<p style="margin:0;font-size:13px"><strong>Técnica:</strong> ${esc(x.tecnica)}</p>` : ""}
-    ${x.fundamental ? `<p style="margin:0;font-size:13px"><strong>Fundamental:</strong> ${esc(x.fundamental)}</p>` : ""}
-    <div class="conf"><span>Confiança</span><span class="track"><span style="width:${Math.max(0, Math.min(100, +x.confianca || 0))}%"></span></span><span class="mono">${Math.round(+x.confianca || 0)}%</span><span class="pill ${x.risco === "alto" ? "down" : x.risco === "baixo" ? "up" : ""}">risco ${esc(x.risco || "médio")}</span></div>
+    ${x.tecnica ? `<p style="margin:0;font-size:13px">${tagFrase(sg.v ? "historico" : "")}<strong>Técnica:</strong> ${esc(x.tecnica)}</p>` : ""}
+    ${x.fundamental ? `<p style="margin:0;font-size:13px">${tagFrase(sg.v ? "facto" : "")}<strong>Fundamental:</strong> ${esc(x.fundamental)}</p>` : ""}
+    <div class="conf"><span>Confiança da IA</span><span class="track"><span style="width:${Math.max(0, Math.min(100, +x.confianca || 0))}%"></span></span><span class="mono">${Math.round(+x.confianca || 0)}%</span><span class="pill ${x.risco === "alto" ? "down" : x.risco === "baixo" ? "up" : ""}">risco ${esc(x.risco || "médio")}</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn sm" href="#analise/${encodeURIComponent(x.sym)}">Ver análise</a><button class="btn sm" onclick="addIdeia(${i})"><svg class="i"><use href="#i-plus"/></svg>Adicionar</button></div>
   </article>`).join("")}</div>
   ${sg.fontes && sg.fontes.length ? `<div class="card" style="margin-top:14px"><h2>Fontes consultadas</h2><div class="srcs">${sg.fontes.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div></div>` : ""}` : ""}
