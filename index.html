@@ -102,6 +102,27 @@ tr.click{cursor:pointer} tr.click:hover td{background:var(--card2)}
 .empty h2{color:var(--txt)}
 .chartbox{position:relative;width:100%}
 details.mais{margin-top:4px}
+/* janelas minimizáveis */
+.cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cab>h2{margin:0!important;flex:1 1 auto}
+.card>.cab{margin-bottom:12px}
+.minbtn{width:36px;height:36px;flex:none;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--txt3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:auto}
+.minbtn:hover{background:var(--card2);color:var(--txt)}
+.minbtn svg{width:18px;height:18px;transition:transform .15s}
+.card.min{padding-top:12px;padding-bottom:12px}
+.card.min>:not(.cab){display:none!important}
+.card.min>.cab{margin-bottom:0}
+.card.min>.cab>:not(h2):not(.minbtn):not(.ai){display:none!important}
+.card.min .minbtn svg{transform:rotate(-90deg)}
+/* menu lateral recolhido */
+body.menu-min .side{width:70px;padding:24px 10px}
+body.menu-min .side .lbl,body.menu-min .brand .lbl,body.menu-min .side .foot{display:none}
+body.menu-min .nav a{justify-content:center;padding:0}
+body.menu-min .brand{justify-content:center;padding:0 0 22px}
+.recolher{display:flex;align-items:center;gap:12px;min-height:40px;padding:0 12px;border:none;border-radius:10px;background:transparent;color:var(--txt3);cursor:pointer;font-size:13px;margin-top:8px}
+.recolher:hover{color:var(--txt);background:var(--card2)}
+body.menu-min .recolher{justify-content:center;padding:0}
+body.menu-min .recolher svg{transform:rotate(180deg)}
 td.r.mono{white-space:nowrap}
 @media (max-width:600px){table.curta .nm{display:none}table.curta{min-width:0!important}}
 details.mais>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--txt2);font-size:14px;font-weight:500}
@@ -170,6 +191,8 @@ dialog::backdrop{background:rgba(5,10,15,.55)}
   <symbol id="i-def" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
   <symbol id="i-div" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.4a3.5 3.5 0 0 0-3-1.4c-1.7 0-3 .9-3 2.2 0 3 6 1.6 6 4.6 0 1.3-1.3 2.2-3 2.2a3.6 3.6 0 0 1-3.2-1.6"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-side" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/><line x1="20" y1="4" x2="20" y2="20"/></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
@@ -180,9 +203,10 @@ dialog::backdrop{background:rgba(5,10,15,.55)}
 
 <div class="app">
   <nav class="side" aria-label="Menu principal">
-    <div class="brand"><i><svg class="i" style="stroke-width:2.6"><use href="#i-an"/></svg></i>Carteira</div>
+    <div class="brand"><i><svg class="i" style="stroke-width:2.6"><use href="#i-an"/></svg></i><span class="lbl">Carteira</span></div>
     <div class="nav" id="nav"></div>
     <div class="foot" id="sideFoot">A carregar…</div>
+    <button type="button" class="recolher" id="btnMenu" onclick="alternarMenu()"><svg class="i"><use href="#i-side"/></svg><span class="lbl">Recolher menu</span></button>
   </nav>
   <main id="main" tabindex="-1"></main>
   <nav class="tabbar" id="tabbar" aria-label="Navegação"></nav>
@@ -566,8 +590,9 @@ let VIEW = "painel", ARG = "";
 function rota(){ const h = (location.hash || "#painel").slice(1).split("/"); VIEW = VIEWS.some(v => v[0] === h[0]) ? h[0] : "painel"; ARG = decodeURIComponent(h.slice(1).join("/") || ""); render(); window.scrollTo(0, 0); }
 window.addEventListener("hashchange", rota);
 function navs(){
-  $("#nav").innerHTML = VIEWS.map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[1]}</a>`).join("");
-  $("#tabbar").innerHTML = VIEWS.filter(v => v[0] !== "exposicao").map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[0] === "sugestoes" ? "IA" : v[0] === "definicoes" ? "Ajustes" : v[1]}</a>`).join("");
+  const vis = VIEWS.filter(v => !ocultos().includes(v[0]) || VIEW === v[0]);
+  $("#nav").innerHTML = vis.map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""} title="${v[1]}"><svg class="i"><use href="#${v[2]}"/></svg><span class="lbl">${v[1]}</span></a>`).join("");
+  $("#tabbar").innerHTML = vis.filter(v => v[0] !== "exposicao").map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[0] === "sugestoes" ? "IA" : v[0] === "definicoes" ? "Ajustes" : v[1]}</a>`).join("");
 }
 function footer(){
   const q = P.quando ? new Date(P.quando).toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"}) : "—";
@@ -580,11 +605,37 @@ function renderBg(){
   if (a && $("#main").contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){ if (!renderBg.wait){ renderBg.wait = true; a.addEventListener("blur", () => { renderBg.wait = false; render(); }, {once:true}); } return; }
   render();
 }
+/* separadores escondidos e janelas minimizadas: escolhas deste aparelho */
+const OPCIONAIS = [["dividendos","Dividendos"],["exposicao","Exposição e plano"],["analise","Análise"],["sugestoes","Sugestões IA"]];
+const ocultos = () => store.get("cart.ocultos", []);
+function alternarSeparador(v, mostrar){ const o = ocultos().filter(x => x !== v); if (!mostrar) o.push(v); store.set("cart.ocultos", o); render(); }
+function alternarMenu(){ const v = !document.body.classList.contains("menu-min"); document.body.classList.toggle("menu-min", v); store.set("cart.menuMin", v); const b = $("#btnMenu"); if (b) b.title = v ? "Expandir menu" : ""; setTimeout(() => Object.values(charts).forEach(c => c.resize()), 220); }
+const chaveJanela = (t) => VIEW + ":" + t.split("·")[0].replace(/\(.*?\)/g, "").replace(/[\d.,€%+−-]+/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+function ativarMinimizar(root){
+  const fech = store.get("cart.min", {});
+  root.querySelectorAll(".card").forEach(card => {
+    if (card.tagName === "A" || card.dataset.minok) return;
+    /* o título é o primeiro elemento do cartão: um h2, ou a barra de cima que contém o h2 */
+    const p1 = card.firstElementChild; if (!p1) return;
+    let h2, cab;
+    if (p1.tagName === "H2"){ h2 = p1; cab = document.createElement("div"); cab.className = "cab"; card.insertBefore(cab, h2); cab.appendChild(h2); }
+    else if (p1.tagName === "DIV" && p1.querySelector(":scope > h2, :scope > .ai")){ cab = p1; cab.classList.add("cab"); h2 = p1.querySelector(":scope > h2") || p1.querySelector(":scope > .ai"); }
+    else return;
+    const titulo = h2.textContent.trim(), k = chaveJanela(titulo);
+    card.dataset.minok = 1;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "minbtn"; b.innerHTML = '<svg class="i"><use href="#i-chev"/></svg>';
+    const aplicar = min => { card.classList.toggle("min", min); b.setAttribute("aria-expanded", String(!min)); b.setAttribute("aria-label", (min ? "Mostrar " : "Minimizar ") + "«" + titulo + "»"); b.title = min ? "Mostrar" : "Minimizar"; };
+    b.onclick = () => { const f = store.get("cart.min", {}), min = !card.classList.contains("min"); if (min) f[k] = 1; else delete f[k]; store.set("cart.min", f); aplicar(min); if (!min) setTimeout(() => Object.values(charts).forEach(c => c.resize()), 30); };
+    cab.appendChild(b); aplicar(!!fech[k]);
+  });
+}
 function render(){
   aplicarTema(); navs();
   const m = $("#main");
   const f = {painel:vPainel, posicoes:vPosicoes, dividendos:vDividendos, exposicao:vExposicao, analise:vAnalise, sugestoes:vSugestoes, definicoes:vDefinicoes}[VIEW];
   f(m); footer();
+  ativarMinimizar(m);
 }
 
 /* ---------- PAINEL ---------- */
@@ -1755,6 +1806,9 @@ function vDefinicoes(m){
     <label class="f">Código pessoal da dia.<input class="in mono" id="dCod" value="${esc(diaCfg().code || "")}" autocomplete="off" placeholder="o mesmo que usas na app dia."></label>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" onclick="ligarDia()">Ligar à dia.</button>${diaCfg().code ? `<button class="btn sm" onclick="setCfg('dia', {});DIA={mes:null,erro:'',quando:0};store.set('cart.dia',DIA)">Desligar</button>` : ""}</div>
     ${DIA.erro ? `<div class="warn" style="margin:0">${esc(DIA.erro)}</div>` : DIA.mes ? `<span class="status ok"><i></i>Ligado · líquido do mês ${eur(DIA.mes.liquido || 0, 0)}</span>` : ""}
+    <h2 style="margin:6px 0 0">Separadores neste aparelho</h2>
+    <div class="setgrid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">${OPCIONAIS.map(([v, n]) => `<label><span>${n}</span><input type="checkbox" style="width:22px;min-height:22px" ${ocultos().includes(v) ? "" : "checked"} onchange="alternarSeparador('${v}', this.checked)"></label>`).join("")}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="store.set('cart.min', {});render();toast('Todas as janelas abertas.')">Abrir todas as janelas minimizadas</button></div>
     <h2 style="margin:6px 0 0">Comparar com</h2>
     <div class="seg" role="group" aria-label="Índice de comparação" style="align-self:flex-start">${BENCH.map(([s, n]) => `<button type="button" class="${benchSym() === s ? "on" : ""}" onclick="setCfg('bench','${s}');atualizarPrecos(true)">${n}</button>`).join("")}</div>
     <h2 style="margin:6px 0 0">Corretoras</h2>
@@ -1797,6 +1851,8 @@ function importar(f){
 
 /* ---------- arranque ---------- */
 aplicarTema();
+if (store.get("cart.menuMin", false)) document.body.classList.add("menu-min");
+new MutationObserver(() => ativarMinimizar($("#main"))).observe($("#main"), {childList:true, subtree:true});
 rota();
 estadoNotif().then(() => { if (VIEW === "definicoes") render(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistration("./").then(r => r && r.update()).catch(() => {});
