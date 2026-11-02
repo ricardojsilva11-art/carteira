@@ -97,6 +97,9 @@ td{padding:11px 6px;border-top:1px solid var(--line);vertical-align:middle}
 td.r,th.r{text-align:right}
 tr.click{cursor:pointer} tr.click:hover td{background:var(--card2)}
 .tk{font-weight:600}.sub{font-size:12px;color:var(--txt3)}
+.ficha{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px}.ficha .fl{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}.ficha .fl>span:last-child{text-align:right}
+@media (max-width:600px){.ficha{grid-template-columns:1fr}}
+th.ord button{all:unset;cursor:pointer;font:inherit;color:inherit}th.ord button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:3px}
 .bar{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px;background:var(--card2)}
 .empty{text-align:center;padding:40px 20px;color:var(--txt2)}
 .empty h2{color:var(--txt)}
@@ -351,6 +354,14 @@ async function atualizarPrecos(forcar){
 const moedaFx = m => m === "GBp" || m === "GBX" ? "GBP" : (m || "EUR");
 const escalaMoeda = m => m === "GBp" || m === "GBX" ? .01 : 1;
 function fxAgora(moeda){ const c = moedaFx(moeda); return c === "EUR" ? 1 : ((P.fx[c] || {}).preco || NaN); }
+/* preço desatualizado: mais de 2 dias úteis sem cotação (cripto: mais de 1 dia) */
+function precoVelho(sym){
+  const pr = P.precos[sym]; if (!pr || !pr.dia) return "";
+  const cripto = /-USD$|-EUR$/.test(sym) || (ativo(sym) || {}).tipo === "Cripto";
+  let n = 0; const d = new Date(pr.dia + "T12:00:00Z"), fim = new Date(hoje() + "T12:00:00Z");
+  while (d < fim && n < 10){ d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (cripto || (w > 0 && w < 6)) n++; }
+  return n > (cripto ? 1 : 2) ? pr.dia : "";
+}
 function precoEUR(sym){ const p = P.precos[sym]; if (!p) return NaN; return p.preco * escalaMoeda(p.moeda) * fxAgora(p.moeda); }
 
 /* ---------- cálculos da carteira ---------- */
@@ -430,7 +441,7 @@ function alertas(ex){
   const s0 = ex.setores[0]; if (s0 && s0[1] > .35 && s0[0] !== "Outros") out.push(`${s0[0]} pesa ${pct(s0[1])} da carteira. Mais de 35% num só setor aumenta o risco.`);
   const a0 = ex.ativos[0]; if (a0 && a0[1] > .25 && ex.ativos.length > 1) out.push(`${a0[0]} vale ${pct(a0[1])} da carteira. Uma posição acima de 25% domina os resultados.`);
   const c = ex.tipos.find(t => t[0] === "Cripto"); if (c && c[1] > .25) out.push(`Cripto representa ${pct(c[1])} — é a classe mais volátil.`);
-  const usd = ex.moedas.find(m => m[0] === "USD"); if (usd && usd[1] > .5) out.push(`${pct(usd[1])} está em dólares: o câmbio euro/dólar também mexe no teu resultado.`);
+  const usd = exposicaoReal(posicoes()).moedas.find(m => m[0] === "USD"); if (usd && usd[1] > .5) out.push(`${pct(usd[1])} está em dólares: o câmbio euro/dólar também mexe no teu resultado.`);
   return out;
 }
 /* ---------- dividendos ---------- */
@@ -634,7 +645,7 @@ function navs(){
   $("#tabbar").innerHTML = vis.filter(v => v[0] !== "exposicao").map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[0] === "sugestoes" ? "IA" : v[0] === "definicoes" ? "Ajustes" : v[1]}</a>`).join("");
 }
 function footer(){
-  const q = P.quando ? new Date(P.quando).toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"}) : "—";
+  const q = P.quando ? (Date.now() - P.quando > 864e5 ? dataPT(new Date(P.quando).toISOString().slice(0, 10)) + " " : "") + new Date(P.quando).toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"}) : "—";
   const sy = syncState.ok === true ? "Sincronizado" : syncState.ok === false ? "Erro na sincronização" : (L.code ? "A ligar…" : "Sem sincronização");
   const el = $("#sideFoot"); if (el) el.innerHTML = `${loadingPrecos ? '<span class="spin" aria-hidden="true"></span> A atualizar preços…' : "Preços: " + q}<br>${esc(sy)}`;
   const st = document.getElementById("syncStatus"); if (st){ st.className = "status " + (syncState.ok ? "ok" : syncState.ok === false ? "bad" : ""); st.innerHTML = `<i></i>${esc(syncState.ok === false ? syncState.msg : sy)}`; }
@@ -687,23 +698,25 @@ function vPainel(m){
   const ps = posicoes(), t = totais(ps);
   if (!vivos("ops").length) return semDados(m);
   const nAv = listaAvisos(ps).length, al = alvos(), A = valorPlano(), sug = sugerirCompras(A, al, ps);
+  const velhos = ps.filter(p => p.qtd > 0 && precoVelho(p.sym));
   m.innerHTML = `${chipsCorretora()}${nAv ? `<a class="warn" href="#posicoes" style="display:block;margin:0 0 14px;text-decoration:none">${nAv === 1 ? "1 ponto a rever nos teus dados" : `${nAv} pontos a rever nos teus dados`} →</a>` : ""}
   <div class="head">
     <div style="display:flex;flex-direction:column;gap:6px">
       <span class="muted" style="font-size:14px">Valor da carteira</span>
       <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span class="big mono">${eur(t.valor)}</span>
-      <span class="mono ${tone(t.total)}" style="font-size:17px" title="Resultado total">${eurS(t.total)} (${pctS(t.totalPct)})</span></div>
-      <span class="muted" style="font-size:13px;line-height:1.6">Não realizado <span class="mono ${tone(t.naoRealizado)}">${eurS(t.naoRealizado)}</span> · Realizado <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span> · Dividendos líquidos <span class="mono ${tone(t.divRec)}">${eurS(t.divRec)}</span>${t.custosAvulsos ? ` · Custos <span class="mono down">${eurS(-t.custosAvulsos)}</span>` : ""}</span>
+      <span class="mono ${tone(t.dia)}" style="font-size:16px">hoje ${eurS(t.dia)} (${pctS(t.diaPct)})</span></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="atualizarPrecos(true)" aria-label="Atualizar preços"><svg class="i"><use href="#i-sync"/></svg><span>Atualizar</span></button>
       <button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar</button>
     </div>
   </div>
+  ${velhos.length ? `<div class="warn" style="margin:-4px 0 14px">Preço desatualizado: ${velhos.map(p => `${esc(p.sym)} (${dataPT(precoVelho(p.sym))})`).join(", ")}. Toca em Atualizar; se continuar, a bolsa pode estar fechada ou o ativo sem negociação.</div>` : ""}
   <div class="grid4">
-    <div class="card kpi"><span class="lab">Resultado hoje</span><span class="v mono ${tone(t.dia)}">${eurS(t.dia)} <span style="font-size:14px">${pctS(t.diaPct)}</span></span></div>
-    <div class="card kpi"><span class="lab">Capital investido</span><span class="v mono">${eur(t.capitalBruto)}</span><span class="sub">líquido (compras − vendas): ${eur(t.capitalLiquido)}</span></div>
-    <a class="card kpi" href="#dividendos" style="text-decoration:none;color:inherit"><span class="lab">Dividendos · 12 meses</span><span class="v mono">${eur(t.div12)}</span><span class="sub">previsão: ${eur(t.divPrev, 0)}/ano</span></a>
+    <div class="card kpi"><span class="lab">Capital líquido investido</span><span class="v mono">${eur(t.capitalLiquido)}</span><span class="sub">compras ${eur(t.capitalBruto, 0)} − vendas ${eur(t.capitalBruto - t.capitalLiquido, 0)}</span></div>
+    <div class="card kpi"><span class="lab">Resultado total</span><span class="v mono ${tone(t.total)}">${eurS(t.total)} <span style="font-size:14px">${pctS(t.totalPct)}</span></span>
+      <span class="sub" style="line-height:1.55">não realizado <span class="mono ${tone(t.naoRealizado)}">${eurS(t.naoRealizado, 0)}</span><br>realizado <span class="mono ${tone(t.realizado)}">${eurS(t.realizado, 0)}</span> · dividendos <span class="mono ${tone(t.divRec)}">${eurS(t.divRec, 0)}</span>${t.custosAvulsos ? `<br>custos <span class="mono down">${eurS(-t.custosAvulsos, 0)}</span>` : ""}</span></div>
+    <a class="card kpi" href="#dividendos" style="text-decoration:none;color:inherit"><span class="lab">Dividendos recebidos</span><span class="v mono">${eur(t.divRec)}</span><span class="sub">líquidos, desde o início · 12 meses: ${eur(t.div12)}</span></a>
     <a class="card kpi" href="#exposicao" style="text-decoration:none;color:inherit"><span class="lab">Próximo investimento · ${eur(A, 0)}</span>${sug.length ? `<span style="font-size:15px;font-weight:600;line-height:1.5">${sug.slice(0, 2).map(([s, v]) => `${esc(s)} <span class="mono muted2">${eur(v, 0)}</span>`).join("<br>")}${sug.length > 2 ? ` <span class="sub">+${sug.length - 2}</span>` : ""}</span>` : `<span class="sub" style="line-height:1.4">Define os alvos em Exposição e plano</span>`}</a>
   </div>
   <div class="card" style="margin-bottom:14px">
@@ -725,7 +738,7 @@ function vPainel(m){
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h2 style="margin:0">Posições</h2><a href="#posicoes" style="font-size:14px">Ver todas</a></div>
-    ${tabelaPos(ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor).slice(0, 8), true)}
+    ${tabelaPos(ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor).slice(0, 8), true, t.valor)}
   </div>`;
   desenharEvol();
 }
@@ -782,14 +795,23 @@ function barraBloco(itens, cores){
   return `<div class="bar" role="img" aria-label="${esc(itens.map(x => x[0] + " " + pct(x[1])).join(", "))}">${itens.map(x => `<div style="width:${(x[1] * 100).toFixed(2)}%;background:${cores[x[0]] || "#6B7785"}"></div>`).join("")}</div>
   <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:13px;margin-top:12px">${itens.map(x => `<span style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:${cores[x[0]] || "#6B7785"}"></span>${esc(x[0])} <span class="mono muted2">${pct(x[1])}</span></span>`).join("")}</div>`;
 }
-function tabelaPos(lista, curta){
+let ORD = store.get("cart.ordPos", {k:"valor", d:-1});
+function ordenarPos(k){ ORD = ORD.k === k ? {k, d:-ORD.d} : {k, d:k === "nome" ? 1 : -1}; store.set("cart.ordPos", ORD); render(); }
+function ordenar(lista){
+  const f = {valor:p => p.temPreco ? p.valor : p.custo, peso:p => p.temPreco ? p.valor : p.custo, rend:p => p.temPreco ? p.rend : -Infinity, ganho:p => p.temPreco ? p.ganho : -Infinity, nome:p => p.sym}[ORD.k] || (p => p.valor);
+  return lista.slice().sort((a, b) => { const x = f(a), y = f(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * ORD.d; });
+}
+function tabelaPos(lista, curta, total){
   if (!lista.length) return `<p class="muted">Sem posições abertas.</p>`;
-  return `<div class="tbl"><table class="${curta ? "curta" : ""}"><thead><tr><th>Ativo</th>${curta ? "" : '<th>Tipo</th><th class="r">Qtd.</th><th class="r">Preço</th>'}<th class="r nm">Investido</th><th class="r">Valor</th><th class="r nm">Hoje</th><th class="r">Resultado</th></tr></thead><tbody>
+  const tot = total || lista.reduce((s, p) => s + (p.temPreco ? p.valor : p.custo), 0) || 1;
+  const th = (k, t, cls) => curta ? `<th class="${cls || ""}">${t}</th>` : `<th class="${cls || ""} ord" aria-sort="${ORD.k === k ? (ORD.d > 0 ? "ascending" : "descending") : "none"}"><button type="button" onclick="ordenarPos('${k}')">${t}${ORD.k === k ? (ORD.d > 0 ? " ↑" : " ↓") : ""}</button></th>`;
+  return `<div class="tbl"><table class="${curta ? "curta" : ""}"><thead><tr>${th("nome", "Ativo")}${curta ? "" : '<th>Tipo</th><th class="r">Qtd.</th><th class="r">Preço</th>'}<th class="r nm">Investido</th>${th("valor", "Valor", "r")}${th("peso", "Peso", "r")}<th class="r nm">Hoje</th>${th("rend", "Resultado", "r")}</tr></thead><tbody>
   ${lista.map(p => `<tr class="click" tabindex="0" onclick="verAtivo('${esc(p.sym)}')" onkeydown="if(event.key==='Enter')verAtivo('${esc(p.sym)}')">
     <td><div style="display:flex;flex-direction:column;gap:2px;min-width:110px"><span class="tk">${esc(p.sym)}</span><span class="sub">${esc(p.nome)}</span></div></td>
-    ${curta ? "" : `<td><span class="pill" style="border-left:3px solid ${COR_TIPO[p.tipo] || "#6B7785"}">${esc(p.tipo)}</span></td><td class="r mono">${nf(p.qtd < 10 ? 4 : 2).format(p.qtd).replace(/,?0+$/, "")}</td><td class="r mono">${fmtPreco(p.precoLocal, p.moeda)}${p.sessao ? `<div class="sub">${esc(p.sessao)}</div>` : ""}</td>`}
+    ${curta ? "" : `<td><span class="pill" style="border-left:3px solid ${COR_TIPO[p.tipo] || "#6B7785"}">${esc(p.tipo)}</span></td><td class="r mono">${nf(p.qtd < 10 ? 4 : 2).format(p.qtd).replace(/,?0+$/, "")}</td><td class="r mono">${fmtPreco(p.precoLocal, p.moeda)}${precoVelho(p.sym) ? `<div class="sub" style="color:var(--warn)">de ${dataPT(precoVelho(p.sym))}</div>` : p.sessao ? `<div class="sub">${esc(p.sessao)}</div>` : ""}</td>`}
     <td class="r mono muted2 nm">${eur(p.custo, 0)}</td>
     <td class="r mono">${p.temPreco ? eur(p.valor, 0) : '<span class="muted">sem preço</span>'}</td>
+    <td class="r mono muted2">${pct((p.temPreco ? p.valor : p.custo) / tot)}</td>
     <td class="r mono nm ${tone(p.varDiaPct)}">${p.temPreco ? pctS(p.varDiaPct) : ""}</td>
     <td class="r mono ${tone(p.ganho)}" style="font-weight:600">${p.temPreco ? `${pctS(p.rend)}<div class="sub ${tone(p.ganho)}" style="font-weight:400">${eurS(p.ganho, 0)}</div>` : ""}</td>
   </tr>`).join("")}</tbody></table></div>`;
@@ -799,14 +821,14 @@ function tabelaPos(lista, curta){
 function vPosicoes(m){
   if (!vivos("ops").length) return semDados(m);
   const ps = posicoes(), t = totais(ps);
-  const abertas = ps.filter(p => p.qtd > 0).sort((a, b) => b.valor - a.valor), fechadas = ps.filter(p => p.qtd <= 0);
+  const abertas = ordenar(ps.filter(p => p.qtd > 0)), fechadas = ps.filter(p => p.qtd <= 0);
   const ops = opsF().slice().sort((a, b) => (b.data || "").localeCompare(a.data || ""));
   m.innerHTML = `<div class="head"><h1>Posições</h1><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#exposicao"><svg class="i"><use href="#i-exp"/></svg>Exposição e plano</a><button class="btn" onclick="abrirImport()"><svg class="i"><use href="#i-up"/></svg>Importar extrato</button><button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div></div>
   ${chipsCorretora()}
   ${avisosDados(ps)}
   ${porCorretoraBloco()}
-  <div class="card" style="margin-bottom:14px">${tabelaPos(abertas, false)}
-  <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca numa posição para ver o detalhe, editar setores ou analisar.</p></div>
+  <div class="card" style="margin-bottom:14px">${tabelaPos(abertas, false, t.valor)}
+  <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca nos títulos das colunas para ordenar e numa posição para ver a ficha.</p></div>
   ${fechadas.length ? `<div class="card" style="margin-bottom:14px"><h2>Posições fechadas</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Resultado realizado</th></tr></thead><tbody>${fechadas.map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></td><td class="r mono ${tone(p.realizado)}">${eurS(p.realizado)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
   <div class="card"><h2>Movimentos</h2><div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th>Operação</th><th class="r">Quantidade</th><th class="r">Total (€)</th><th class="r">Preço médio</th><th></th></tr></thead><tbody>
   ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym || "Conta")}</td><td><span class="pill ${o.tipo === "venda" || TIPOS_CUSTO.includes(o.tipo) ? "down" : o.tipo === "dividendo" ? "" : "up"}">${({venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"})[o.tipo] || "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${TIPOS_CAPITAL.includes(o.tipo) ? esc(String(o.qtd).replace(".", ",")) : "—"}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${TIPOS_CAPITAL.includes(o.tipo) && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
@@ -828,17 +850,34 @@ function avisosDados(ps){
 function verAtivo(sym){
   const p = posicoes().find(x => x.sym === sym); if (!p) return;
   const a = ativo(sym) || {id:sym, setores:{"Outros":100}, tipo:"Ação"};
-  dlg(`<h3>${esc(sym)} · ${esc(p.nome)}</h3>
-  <div class="fgrid">
-    <div class="card kpi" style="padding:12px"><span class="lab">Valor</span><span class="v mono" style="font-size:18px">${p.temPreco ? eur(p.valor) : "—"}</span></div>
-    <div class="card kpi" style="padding:12px"><span class="lab">Resultado</span><span class="v mono ${tone(p.ganho)}" style="font-size:18px">${p.temPreco ? eurS(p.ganho) + " · " + pctS(p.rend) : "—"}</span></div>
-    <div class="card kpi" style="padding:12px"><span class="lab">Quantidade · preço médio</span><span class="mono">${String(+p.qtd.toFixed(8)).replace(".", ",")} · ${p.qtd ? eur(p.custo / p.qtd) : "—"}</span></div>
-    <div class="card kpi" style="padding:12px"><span class="lab">Preço atual</span><span class="mono">${fmtPreco(p.precoLocal, p.moeda)}</span></div>
+  const ops = p.ops.slice().sort((x, y) => (y.data || "").localeCompare(x.data || "") || (y.criado || 0) - (x.criado || 0));
+  const qtdTxt = String(+p.qtd.toFixed(8)).replace(".", ",");
+  const tot = totais(posicoes()).valor || 1, unitEur = p.temPreco && p.qtd > 0 ? p.valor / p.qtd : NaN, velho = precoVelho(sym);
+  const linha = (lab, v, cls) => `<div class="fl"><span class="muted2">${lab}</span><span class="mono ${cls || ""}">${v}</span></div>`;
+  dlg(`<h3 tabindex="-1" autofocus style="outline:none">${esc(sym)} · ${esc(p.nome)}</h3>
+  <div class="ficha">
+    ${linha("Quantidade", qtdTxt)}
+    ${linha("Preço médio (FIFO)", p.qtd > 0 ? eur(p.precoMedio, p.precoMedio < 1 ? 4 : 2) : "—")}
+    ${linha("Preço atual", `${fmtPreco(p.precoLocal, p.moeda)}${moedaFx(p.moeda) !== "EUR" && isFinite(unitEur) ? ` <span class="sub">≈ ${eur(unitEur, unitEur < 1 ? 4 : 2)}</span>` : ""}${velho ? ` <span class="sub" style="color:var(--warn)">de ${dataPT(velho)}</span>` : ""}`)}
+    ${linha("Investido (posição aberta)", eur(p.custo))}
+    ${linha("Valor atual", p.temPreco ? eur(p.valor) + (p.qtd > 0 ? ` <span class="sub">${pct(p.valor / tot)} da carteira</span>` : "") : "—")}
+    ${linha("Não realizado", p.temPreco && p.qtd > 0 ? `${eurS(p.ganho)} · ${pctS(p.rend)}` : "—", tone(p.ganho))}
+    ${linha("Realizado em vendas", p.realizado ? eurS(p.realizado) : "—", tone(p.realizado))}
+    ${linha("Dividendos recebidos", p.divRec ? `${eur(p.divRec)} <span class="sub">líquido${p.divImp ? ` · ${eur(p.divImp)} de imposto` : ""}</span>` : "—")}
+    ${p.custos ? linha("Comissões e impostos avulsos", eurS(-p.custos), "down") : ""}
+    ${p.semCompra ? `<div class="warn" style="grid-column:1/-1">Há ${p.semCompra.reduce((s, x) => s + x.qtd, 0).toString().replace(".", ",")} unidades vendidas sem compra registada. Esse ganho não entra nas contas até importares o extrato com a compra.</div>` : ""}
   </div>
+  <h4 style="margin:16px 0 6px;font-size:14px">Movimentos (${ops.length}) <span class="sub" style="font-weight:400">· toca num para editar</span></h4>
+  <div class="tbl"><table class="curta"><thead><tr><th>Data</th><th>Operação</th><th class="r nm">Qtd.</th><th class="r">Total</th><th class="r nm">Preço/un.</th><th class="nm"></th></tr></thead><tbody>
+  ${ops.map(o => `<tr class="click" onclick="abrirOp('${o.id}')"><td class="mono">${dataPT(o.data)}</td><td><span class="pill ${o.tipo === "venda" || TIPOS_CUSTO.includes(o.tipo) ? "down" : o.tipo === "dividendo" ? "" : "up"}">${({venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"})[o.tipo] || "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono nm">${TIPOS_CAPITAL.includes(o.tipo) ? esc(String(o.qtd).replace(".", ",")) : "—"}</td><td class="r mono">${eur(o.total)}${o.tipo === "dividendo" && o.imposto ? `<div class="sub">+${eur(o.imposto)} imp.</div>` : ""}</td><td class="r mono muted2 nm">${TIPOS_CAPITAL.includes(o.tipo) && o.qtd ? eur(o.total / o.qtd, o.total / o.qtd < 1 ? 4 : 2) : "—"}</td><td class="r nm"><button class="btn sm" onclick="event.stopPropagation();abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
+  </tbody></table></div>
+  <details class="mais" style="margin-top:14px"><summary>Tipo de ativo e setores</summary><div style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
   <label class="f">Tipo de ativo<select class="in" id="eTipo">${TIPOS.map(t => `<option ${a.tipo === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>
   <div><div class="lab muted2" style="font-size:13px;margin-bottom:8px">Setores (%) — ${a.fonte === "IA" ? "estimados pela IA" : a.manual ? "definidos por ti" : "automático"}${a.nota ? " · " + esc(a.nota) : ""}</div>
   <div class="setgrid">${SETORES.map(s => `<label><span>${s}</span><input type="number" inputmode="decimal" min="0" max="100" step="0.1" data-set="${s}" value="${a.setores && a.setores[s] ? a.setores[s] : ""}" aria-label="${s} em percentagem"></label>`).join("")}</div></div>
-  <div class="acts"><button class="btn" onclick="reclassificar('${esc(sym)}')">Reclassificar com IA</button><a class="btn" href="#analise/${encodeURIComponent(sym)}" onclick="fecharDlg()">Analisar</a><button class="btn" onclick="fecharDlg()">Fechar</button><button class="btn pri" onclick="guardarAtivo('${esc(sym)}')">Guardar</button></div>`);
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="reclassificar('${esc(sym)}')">Reclassificar com IA</button><button class="btn sm pri" onclick="guardarAtivo('${esc(sym)}')">Guardar setores</button></div>
+  </div></details>
+  <div class="acts"><button class="btn" onclick="abrirOp(null, ${esc(JSON.stringify({sym, nome:p.nome}))})">Novo movimento</button><a class="btn" href="#analise/${encodeURIComponent(sym)}" onclick="fecharDlg()">Analisar</a><button class="btn pri" onclick="fecharDlg()">Fechar</button></div>`, true);
 }
 function guardarAtivo(sym){
   const a = Object.assign({id:sym}, ativo(sym) || {});
@@ -1065,10 +1104,10 @@ function vDividendos(m){
   const fut = previsaoMensal();
   m.innerHTML = `<div class="head"><h1>Dividendos e calendário</h1><button class="btn pri" onclick="abrirOp(null, null, 'dividendo')"><svg class="i"><use href="#i-plus"/></svg>Registar dividendo</button></div>
   <div class="grid4">
-    <div class="card kpi"><span class="lab">Recebido · 12 meses (líquido)</span><span class="v mono">${eur(t.div12)}</span></div>
-    <div class="card kpi"><span class="lab">Recebido desde o início</span><span class="v mono">${eur(t.divRec)}</span></div>
-    <div class="card kpi"><span class="lab">Previsão próximos 12 meses (bruto)</span><span class="v mono">${eur(t.divPrev)}</span><span class="sub">≈ ${eur(t.divPrev / 12)} por mês</span></div>
-    <div class="card kpi"><span class="lab">Rendimento da carteira</span><span class="v mono">${pct(yieldAtual)}</span><span class="sub">sobre o investido: ${pct(yieldCusto)}</span></div>
+    <div class="card kpi"><span class="lab">Recebidos · líquido</span><span class="v mono">${eur(t.divRec)}</span><span class="sub">desde o início · 12 meses: ${eur(t.div12)}</span></div>
+    <div class="card kpi"><span class="lab">Bruto e imposto retido</span><span class="v mono">${eur(t.divBruto)}</span><span class="sub">imposto retido: ${eur(t.divImp)}${t.divBruto > 0 ? ` (${pct(t.divImp / t.divBruto)})` : ""}</span></div>
+    <div class="card kpi"><span class="lab">Estimados por confirmar · bruto</span><span class="v mono ${porEst.length ? "" : "muted2"}">${eur(porEst.reduce((s, x) => s + x.bruto, 0))}</span><span class="sub">${porEst.length ? `${porEst.length} pagamento${porEst.length === 1 ? "" : "s"} detetado${porEst.length === 1 ? "" : "s"} no histórico` : "nada por confirmar"}</span></div>
+    <div class="card kpi"><span class="lab">Previsão 12 meses · bruto</span><span class="v mono">${eur(t.divPrev)}</span><span class="sub">rendimento ${pct(yieldAtual)} · sobre o investido ${pct(yieldCusto)}</span></div>
   </div>
   ${calendarioBloco()}
   <div class="row">
@@ -1084,9 +1123,9 @@ function vDividendos(m){
     <div class="tbl"><table><thead><tr><th>Data ex</th><th>Ativo</th><th class="r">Unidades</th><th class="r">Por unidade</th><th class="r">Bruto estimado</th><th></th></tr></thead><tbody>
     ${porEst.slice(0, verTodosDiv ? 40 : 5).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono">${String(+x.qtd.toFixed(6)).replace(".", ",")}</td><td class="r mono">${fmtPreco(x.porUnidade, x.moeda)}</td><td class="r mono">${eur(x.bruto)}</td><td class="r"><button class="btn sm" onclick='abrirOp(null, ${esc(JSON.stringify({sym:x.sym, nome:(ativo(x.sym) || {}).nome || x.sym, data:x.data}))}, "dividendo")'>Registar</button></td></tr>`).join("")}
     </tbody></table></div>${porEst.length > 5 ? `<button class="btn sm" style="margin-top:10px" onclick="verTodosDiv=!verTodosDiv;render()">${verTodosDiv ? "Mostrar só os 5 mais recentes" : `Ver todos (${porEst.length})`}</button>` : ""}</div>` : ""}
-  <div class="card"><h2>Registados</h2>
-    ${pg.filter(x => x.registado).length ? `<div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th class="r">Líquido</th><th class="r">Imposto retido</th><th></th></tr></thead><tbody>
-    ${pg.filter(x => x.registado).slice(0, verTodosReg ? 999 : 10).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono up">${eur(x.liquido)}</td><td class="r mono muted2">${x.imposto ? eur(x.imposto) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${x.id}')">Editar</button></td></tr>`).join("")}
+  <div class="card"><h2>Recebidos (registados)</h2>
+    ${pg.filter(x => x.registado).length ? `<div class="tbl"><table><thead><tr><th>Pagamento</th><th>Ativo</th><th class="r nm">Bruto</th><th class="r">Imposto retido</th><th class="r">Líquido</th><th></th></tr></thead><tbody>
+    ${pg.filter(x => x.registado).slice(0, verTodosReg ? 999 : 10).map(x => `<tr><td class="mono">${dataPT(x.data)}</td><td class="tk">${esc(x.sym)}</td><td class="r mono muted2 nm">${eur(x.liquido + x.imposto)}</td><td class="r mono muted2">${x.imposto ? eur(x.imposto) : "—"}</td><td class="r mono up">${eur(x.liquido)}</td><td class="r"><button class="btn sm" onclick="abrirOp('${x.id}')">Editar</button></td></tr>`).join("")}
     </tbody></table></div>${pg.filter(x => x.registado).length > 10 ? `<button class="btn sm" style="margin-top:10px" onclick="verTodosReg=!verTodosReg;render()">${verTodosReg ? "Mostrar só os 10 mais recentes" : `Ver todos (${pg.filter(x => x.registado).length})`}</button>` : ""}` : `<p class="muted">Ainda não registaste dividendos.</p>`}
   </div>
   <p class="muted" style="font-size:12.5px;margin-top:14px;line-height:1.5">A previsão usa os dividendos pagos nos últimos 12 meses multiplicados pelas unidades que tens hoje, antes de impostos. Em Portugal os dividendos pagam normalmente 28% de IRS, além do imposto retido no país de origem.</p>`;
@@ -1097,7 +1136,7 @@ function vDividendos(m){
   const es = meses.map(mm => pg.filter(x => !x.registado && x.data.slice(0, 7) === mm).reduce((s, x) => s + x.bruto, 0));
   const MS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
   const op = baseOpts();
-  op.scales.x.stacked = true; op.scales.y.stacked = true; op.scales.y.ticks.callback = v => NF0.format(v) + " €";
+  op.scales.x.stacked = true; op.scales.y.stacked = true; op.scales.y.ticks.callback = v => eur(v, Math.abs(v) < 10 && v % 1 ? 2 : 0);
   op.plugins.tooltip.callbacks = {label:c => ` ${c.dataset.label}: ${eur(c.parsed.y)}`};
   mkChart("cDiv", {type:"bar", data:{labels:meses.map(mm => MS[+mm.slice(5) - 1] + " " + mm.slice(2, 4)), datasets:[
     {label:"Registados", data:reg.map(v => +v.toFixed(2)), backgroundColor:cssv("--up"), borderRadius:3},
@@ -1117,6 +1156,10 @@ function paisDe(p, a){
   const suf = p.sym.includes(".") ? p.sym.split(".").pop().toUpperCase() : "";
   return PAIS_SUF[suf] || "Outros";
 }
+/* moeda da economia de cada país (exposição cambial real, não a moeda em que o ETF cota) */
+const EURO = ["Alemanha","França","Países Baixos","Espanha","Itália","Bélgica","Irlanda","Finlândia","Áustria","Portugal","Grécia","Luxemburgo","Eslováquia","Eslovénia","Estónia","Letónia","Lituânia","Malta","Chipre","Croácia","Zona Euro"];
+const MOEDA_PAIS = {"Estados Unidos":"USD","Reino Unido":"GBP","Suíça":"CHF","Japão":"JPY","Canadá":"CAD","Austrália":"AUD","Dinamarca":"DKK","Suécia":"SEK","Noruega":"NOK","Hong Kong":"HKD","China":"CNY","Taiwan":"TWD","Coreia do Sul":"KRW","Índia":"INR","Brasil":"BRL","Singapura":"SGD","Israel":"ILS","México":"MXN","África do Sul":"ZAR"};
+const moedaDoPais = p => EURO.includes(p) ? "EUR" : MOEDA_PAIS[p] || (p.startsWith("Cripto") ? "Cripto" : p.startsWith("Por ler") ? "Por ler (ETFs)" : "Outras");
 function exposicaoReal(ps){
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0) || 1;
   const emp = {}, paises = {}, semComp = [];
@@ -1138,7 +1181,12 @@ function exposicaoReal(ps){
     }
   });
   const lista = Object.entries(emp).map(([k, e]) => Object.assign({k, total:e.direto + e.etf}, e)).sort((a, b) => (a.k[0] === "~") - (b.k[0] === "~") || b.total - a.total);
-  return {empresas:lista, paises:Object.entries(paises).map(([k, v]) => [k, v / tot]).sort((a, b) => b[1] - a[1]), total:tot, semComp};
+  const moedas = {}; Object.entries(paises).forEach(([k, v]) => { const m = moedaDoPais(k); moedas[m] = (moedas[m] || 0) + v; });
+  const ord = o => Object.entries(o).map(([k, v]) => [k, v / tot]).sort((a, b) => b[1] - a[1]);
+  const pos = ab.map(p => p.valor).sort((a, b) => b - a), somaN = (a, n) => a.slice(0, n).reduce((s, v) => s + v, 0) / tot;
+  const empV = lista.filter(e => e.k[0] !== "~").map(e => e.total);
+  return {empresas:lista, paises:ord(paises), moedas:ord(moedas), total:tot, semComp,
+    conc:{nPos:pos.length, pos5:somaN(pos, 5), pos10:somaN(pos, 10), emp5:somaN(empV, 5), emp10:somaN(empV, 10)}};
 }
 let COMP = {a:null, erro:"", tentados:{}};
 async function carregarComposicoes(forcar){
@@ -1165,13 +1213,21 @@ function exposicaoRealBloco(ps){
     ${COMP.a ? `<span class="status"><span class="spin" aria-hidden="true"></span>&nbsp;A ler a composição do ${esc(COMP.a)} no justETF…</span>` : `<button class="btn sm" onclick="carregarComposicoes(true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar composições</button>`}</div>
     <p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.5">Soma o que tens diretamente com o que está dentro dos teus ETFs (10 maiores posições de cada um, segundo o justETF).</p>
     ${COMP.erro ? `<div class="warn" style="margin:0 0 10px">${esc(COMP.erro)}</div>` : ""}
+    <div class="kpis4" style="margin:0 0 14px;border-top:0;padding-top:0">
+      <div><span class="lab">5 maiores posições</span><span class="v mono">${pct(r.conc.pos5)}</span><span class="sub">10 maiores: ${pct(r.conc.pos10)} · de ${r.conc.nPos}</span></div>
+      <div><span class="lab">5 maiores empresas</span><span class="v mono">${pct(r.conc.emp5)}</span><span class="sub">10 maiores: ${pct(r.conc.emp10)} · direto e pelos ETFs</span></div>
+    </div>
     ${maior && maior.total / r.total > .1 ? `<div class="warn" style="margin:0 0 10px"><strong>${esc(maior.nome)}</strong> vale ${pct(maior.total / r.total)} da carteira${maior.etf > 0 && maior.direto > 0 ? ` (${pct(maior.direto / r.total)} direto + ${pct(maior.etf / r.total)} pelos ETFs)` : ""}.</div>` : ""}
     <div class="tbl"><table><thead><tr><th>Empresa</th><th class="r">Direto</th><th class="r">Pelos ETFs</th><th class="r">Total</th><th style="min-width:120px"></th></tr></thead><tbody>
     ${top.map(e => `<tr><td><span class="tk">${esc(e.nome)}</span>${Object.keys(e.via).length ? `<div class="sub">via ${esc(Object.keys(e.via).join(", "))}</div>` : ""}</td><td class="r mono">${e.direto ? pct(e.direto / r.total) : "—"}</td><td class="r mono muted2">${e.etf ? pct(e.etf / r.total) : "—"}</td><td class="r mono" style="font-weight:600">${pct(e.total / r.total)}</td>
       <td><div class="bar" style="height:8px"><div style="width:${(e.direto / r.total * 100 / Math.max(.01, top[0].total / r.total)).toFixed(1)}%;background:var(--acc)"></div><div style="width:${(e.etf / r.total * 100 / Math.max(.01, top[0].total / r.total)).toFixed(1)}%;background:#6EA8FE88"></div></div></td></tr>`).join("")}
     ${resto.map(e => `<tr><td class="muted2">${esc(e.nome)}</td><td></td><td class="r mono muted2">${pct(e.etf / r.total)}</td><td class="r mono muted2">${pct(e.total / r.total)}</td><td></td></tr>`).join("")}
     </tbody></table></div>
-    <h2 style="margin:16px 0 10px">Países</h2>${barraBloco(r.paises.slice(0, 8), corPaises(r.paises))}
+    <div class="row" style="margin:16px 0 0">
+      <div class="f1"><h2 style="margin:0 0 10px">Países</h2>${barraBloco(r.paises.slice(0, 8), corPaises(r.paises))}</div>
+      <div class="f1"><h2 style="margin:0 0 10px">Moedas · exposição real</h2>${barraBloco(r.moedas.slice(0, 8), Object.assign(corPaises(r.moedas), {EUR:"#6EA8FE", USD:"#4FC1B0", GBP:"#B48CF2", CHF:"#F27E9B", JPY:"#E8D36A"}))}
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0;line-height:1.5">Pela moeda das empresas onde o dinheiro está, não pela moeda em que o ETF cota. Um ETF do MSCI World em euros continua ~70% exposto ao dólar.</p></div>
+    </div>
     ${eua > .7 ? `<div class="warn">${pct(eua)} está em empresas dos Estados Unidos (direto e pelos ETFs).</div>` : ""}
   </div>`;
 }
@@ -1578,10 +1634,10 @@ function calendarioBloco(){
   const ev = eventosCal(90), DS = ["dom","seg","ter","qua","qui","sex","sáb"];
   const semCal = Object.values(CAL.cal || {}).length && !Object.values(CAL.cal).some(c => c.comCalendario);
   return `<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Calendário · próximos 90 dias</h2><button class="btn sm" onclick="atualizarCal(true)"><svg class="i"><use href="#i-sync"/></svg>Atualizar</button></div>
-  ${ev.length ? `<div class="tbl" style="margin-top:10px"><table><tbody>${ev.map(e => `<tr><td class="mono" style="white-space:nowrap">${DS[new Date(e.data + "T12:00:00").getDay()]} ${e.data.slice(8, 10)}/${e.data.slice(5, 7)}</td><td><a href="#analise/${encodeURIComponent(e.sym)}" class="tk" style="text-decoration:none;color:inherit">${esc(e.sym)}</a></td><td>${e.tipo === "res" ? '<span class="pill">Resultados</span>' : `<span class="pill up">${e.tipo === "ex" ? "Data ex" : "Pagamento"}</span>`} <span class="muted2" style="font-size:13px">${esc(e.txt)}</span></td><td class="r mono">${e.valor ? "≈ " + eur(e.valor) : ""}</td></tr>`).join("")}</tbody></table></div>`
+  ${ev.length ? `<div class="tbl" style="margin-top:10px"><table><tbody>${ev.map(e => `<tr><td class="mono" style="white-space:nowrap">${DS[new Date(e.data + "T12:00:00").getDay()]} ${e.data.slice(8, 10)}/${e.data.slice(5, 7)}</td><td><a href="#analise/${encodeURIComponent(e.sym)}" class="tk" style="text-decoration:none;color:inherit">${esc(e.sym)}</a></td><td>${e.tipo === "res" ? '<span class="pill">Resultados</span>' : e.tipo === "ex" ? '<span class="pill" style="border-left:3px solid #F2A65A">Data ex</span>' : '<span class="pill up">Pagamento</span>'} <span class="muted2" style="font-size:13px">${esc(e.txt)}</span></td><td class="r mono">${e.valor ? "≈ " + eur(e.valor) : ""}</td></tr>`).join("")}</tbody></table></div>`
     : `<p class="muted" style="font-size:14px;margin:10px 0 0">${CAL.quando ? "Sem dividendos nem resultados previstos nos próximos 90 dias." : "A carregar…"}</p>`}
   ${semCal ? `<p class="muted" style="font-size:12px;margin:10px 0 0">As datas de resultados e de pagamento não estão disponíveis neste momento; as datas ex-dividendo são estimadas pelo histórico.</p>` : ""}
-  <p class="muted" style="font-size:12px;margin:8px 0 0">Data ex: para receberes o dividendo tens de ter a ação antes deste dia. Valores brutos, antes de impostos.</p></div>`;
+  <p class="muted" style="font-size:12px;margin:8px 0 0"><strong>Data ex</strong>: para receberes o dividendo tens de ter a ação antes deste dia. <strong>Pagamento</strong>: dia em que o dinheiro entra na conta. <strong>Resultados</strong>: apresentação das contas da empresa. Valores de dividendos estimados e brutos, antes de impostos.</p></div>`;
 }
 
 /* ---------- RESUMO SEMANAL ---------- */
@@ -1641,14 +1697,14 @@ function vExposicao(m){
   ${projecaoBloco(ps)}
   ${fireBloco(projecao(ps))}
   <details class="mais" ${store.get("cart.maisExp", false) ? "open" : ""} ontoggle="store.set('cart.maisExp', this.open); if (this.open) desenharExpDetalhe()">
-  <summary>Ver mais detalhe: setores, ativos, classes e moedas</summary>
+  <summary>Ver mais detalhe: setores, ativos, classes e moeda de cotação</summary>
   <div class="row" style="margin-top:14px">
     <div class="card f1"><h2>Setores</h2>${donutBloco("cSet2", ex.setores, COR_SETOR, 14)}<p class="muted" style="font-size:12.5px;margin:12px 0 0">Nos ETFs, cada setor conta pela parte do ETF que lá está investida.</p></div>
     <div class="card f1"><h2>Ativos</h2>${donutBloco("cAt", ex.ativos.map(a => [a[0], a[1]]), cores, 10)}</div>
   </div>
   <div class="row">
     <div class="card f1"><h2>Classes de ativo</h2>${barraBloco(ex.tipos, COR_TIPO)}</div>
-    <div class="card f1"><h2>Moedas</h2>${barraBloco(ex.moedas, corM)}</div>
+    <div class="card f1"><h2>Moeda de cotação</h2>${barraBloco(ex.moedas, corM)}<p class="muted" style="font-size:12.5px;margin:8px 0 0">Moeda em que cada ativo é negociado. A exposição cambial real está em cima.</p></div>
   </div>
   <div class="card"><h2>Setores por posição</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Peso</th><th>Setores</th></tr></thead><tbody>
   ${ps.filter(p => p.qtd > 0 && p.temPreco).sort((a, b) => b.valor - a.valor).map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.tipo)}</span></td><td class="r mono">${pct(p.valor / ex.total)}</td><td><div class="bar" style="min-width:160px">${Object.entries(p.setores).sort((a, b) => b[1] - a[1]).map(([s, v]) => `<div title="${esc(s)} ${v}%" style="width:${v}%;background:${COR_SETOR[s] || "#6B7785"}"></div>`).join("")}</div><div class="sub" style="margin-top:4px">${Object.entries(p.setores).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, v]) => `${esc(s)} ${NF0.format(v)}%`).join(" · ")}</div></td></tr>`).join("")}
