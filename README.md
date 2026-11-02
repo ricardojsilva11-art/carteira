@@ -15,6 +15,7 @@ App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincr
 - Separação por corretora, lista de ativos a seguir, calendário de dividendos e resultados, resumo semanal com IA.
 - Notificações (Web Push): alertas de preço, variações fortes, dividendos (data ex e pagamento), resultados e resumo de domingo.
 - Crescimento previsto: simulação a 5/10/20 anos com o histórico mensal de cada ativo (em euros, com dividendos), teste com os últimos 10 anos e comentário da IA.
+- Independência financeira (FIRE): número FIRE pela regra dos 4% (ou 3,5%/3%), ano provável/pessimista/otimista em euros de hoje e efeito de investir mais 100 €/mês.
 - Avisos de dados em falta (extratos por importar, compras repetidas, vendas sem compra, dividendos por registar).
 - Tema claro e escuro; instalável no ecrã principal do iPhone.
 

@@ -1139,9 +1139,18 @@ function estat(m, anos){
 }
 /* gerador aleatório com semente: a projeção não muda de cada vez que abres a página */
 function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const INFL = .02;
+function fireCfg(){
+  const g = S.cfg.fireGasto != null && S.cfg.fireGasto !== "" ? +S.cfg.fireGasto : (DIA.mes && DIA.mes.gastosPrev > 0 ? Math.round(DIA.mes.gastosPrev) : 1500);
+  const taxa = +S.cfg.fireTaxa || .04;
+  return {gasto:g, taxa, alvo:g * 12 / taxa, idade:+S.cfg.fireIdade || null, doDia:!(S.cfg.fireGasto != null && S.cfg.fireGasto !== "") && !!(DIA.mes && DIA.mes.gastosPrev > 0)};
+}
+let PROJ_MEMO = {k:"", v:null};
 function projecao(ps){
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0);
   if (!ab.length || !LONGO.quando) return null;
+  const fc = fireCfg(), memoK = [Math.round(tot), LONGO.quando, S.cfg.projMensal, valorPlano(), fc.alvo, ab.map(p => p.sym + ":" + Math.round(p.valor)).join(",")].join("|");
+  if (PROJ_MEMO.k === memoK) return PROJ_MEMO.v;
   const M = LONGO.ref ? LONGO.ref.cagr : .09;
   const ativos = ab.map(p => {
     const sr = (LONGO.series[p.sym] || {}).m || [];
@@ -1168,16 +1177,25 @@ function projecao(ps){
   const esp = ativos.reduce((s, a) => s + a.w * a.esp, 0), vol = Math.sqrt(Math.max(0, varP));
   /* simulação: 2000 cenários mês a mês com o investimento mensal */
   const C = S.cfg.projMensal != null && S.cfg.projMensal !== "" ? +S.cfg.projMensal : valorPlano();
-  const anos = 20, N = 2000, rnd = rng(42), mu = Math.log(1 + esp) / 12, sd = vol / Math.sqrt(12);
-  const porAno = Array.from({length:anos + 1}, () => []);
+  const anos = 20, ANOS_FIRE = 45, N = 2000, rnd = rng(42), mu = Math.log(1 + esp) / 12, sd = vol / Math.sqrt(12);
+  const porAno = Array.from({length:anos + 1}, () => []), fireMes = [];
+  const deflM = Math.log(1 + INFL) / 12;
   for (let k = 0; k < N; k++){
-    let v = tot; porAno[0].push(v);
-    for (let mth = 1; mth <= anos * 12; mth++){
+    let v = tot, fm = tot >= fc.alvo ? 0 : null; porAno[0].push(v);
+    for (let mth = 1; mth <= ANOS_FIRE * 12; mth++){
       const u1 = Math.max(1e-12, rnd()), u2 = rnd(), z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
       v = v * Math.exp(mu - sd * sd / 2 + sd * z) + C;
-      if (mth % 12 === 0) porAno[mth / 12].push(v);
+      if (mth <= anos * 12 && mth % 12 === 0) porAno[mth / 12].push(v);
+      if (fm == null && v * Math.exp(-deflM * mth) >= fc.alvo){ fm = mth; if (mth > anos * 12) break; }
     }
+    fireMes.push(fm == null ? Infinity : fm);
   }
+  fireMes.sort((a, b) => a - b);
+  const qf = p => fireMes[Math.floor(p * (N - 1))];
+  /* caminho mediano (sem sorte nem azar), para ver o efeito de mais 100 €/mês */
+  const medianoAnos = c => { let v = tot; for (let mth = 1; mth <= 80 * 12; mth++){ v = v * Math.exp(mu - sd * sd / 2) + c; if (v * Math.exp(-deflM * mth) >= fc.alvo) return mth / 12; } return Infinity; };
+  const fire = Object.assign({}, fc, {p10:qf(.1), p50:qf(.5), p90:qf(.9), prob20:fireMes.filter(x => x <= 240).length / N, prob30:fireMes.filter(x => x <= 360).length / N,
+    ganho100:medianoAnos(C) - medianoAnos(C + 100), progresso:tot / fc.alvo});
   const q = (arr, p) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(p * (s.length - 1))]; };
   const curva = porAno.map((arr, i) => ({ano:i, p10:q(arr, .1), p50:q(arr, .5), p90:q(arr, .9), investido:tot + C * 12 * i}));
   /* teste com o passado: estes pesos, reequilibrados todos os meses, nos últimos 10 anos */
@@ -1201,7 +1219,33 @@ function projecao(ps){
         bench:bIni && bFim ? Math.pow(bFim / bIni, 12 / n) - 1 : null};
     }
   }
-  return {tot, C, esp, vol, ativos, curva, teste, M};
+  const res = {tot, C, esp, vol, ativos, curva, teste, M, fire};
+  PROJ_MEMO = {k:memoK, v:res};
+  return res;
+}
+const anoTxt = m => { if (!isFinite(m)) return "mais de 45 anos"; const a = m / 12; return a < 1 ? "menos de 1 ano" : `${NF0.format(Math.round(a))} ano${Math.round(a) === 1 ? "" : "s"}`; };
+const quandoTxt = m => isFinite(m) ? String(new Date().getFullYear() + Math.round(m / 12)) : "—";
+function fireBloco(pr){
+  if (!pr) return "";
+  const f = pr.fire, idade = m => f.idade && isFinite(m) ? ` · aos ${Math.round(f.idade + m / 12)}` : "";
+  return `<div class="card" style="margin-bottom:14px" id="fire">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h2 style="margin:0">Independência financeira (FIRE)</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <label class="f" style="flex-direction:row;align-items:center;gap:8px">Despesas/mês<input class="in mono" style="width:90px;min-height:36px" inputmode="decimal" value="${NF0.format(f.gasto).replace(/\s/g, "")}" onchange="setCfg('fireGasto', num(this.value) > 0 ? num(this.value) : '')"> €</label>
+        <label class="f" style="flex-direction:row;align-items:center;gap:8px">Idade<input class="in mono" style="width:64px;min-height:36px" inputmode="numeric" value="${f.idade || ""}" placeholder="—" onchange="setCfg('fireIdade', num(this.value) > 0 ? num(this.value) : '')"></label>
+        <div class="seg" role="group" aria-label="Taxa de levantamento">${[[.04, "4%"], [.035, "3,5%"], [.03, "3%"]].map(([t, n]) => `<button type="button" class="${Math.abs(f.taxa - t) < 1e-9 ? "on" : ""}" onclick="setCfg('fireTaxa', ${t})">${n}</button>`).join("")}</div>
+      </div></div>
+    <div class="metrics" style="margin-bottom:12px">
+      <div><span class="n">O teu número FIRE</span><span class="v mono">${eur(f.alvo, 0)}</span><span class="sub">${eur(f.gasto * 12, 0)}/ano ÷ ${NF1.format(f.taxa * 100)}%${f.doDia ? " · despesas da app dia." : ""}</span></div>
+      <div><span class="n">Provável</span><span class="v mono">${quandoTxt(f.p50)}</span><span class="sub">daqui a ${anoTxt(f.p50)}${idade(f.p50)}</span></div>
+      <div><span class="n">Se correr mal (1 em 10)</span><span class="v mono">${quandoTxt(f.p90)}</span><span class="sub">daqui a ${anoTxt(f.p90)}${idade(f.p90)}</span></div>
+      <div><span class="n">Se correr bem (1 em 10)</span><span class="v mono">${quandoTxt(f.p10)}</span><span class="sub">daqui a ${anoTxt(f.p10)}${idade(f.p10)}</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--txt2);margin-bottom:6px"><span>Já tens ${pct(Math.min(1, f.progresso))} do objetivo</span><span class="mono">${eur(pr.tot, 0)} de ${eur(f.alvo, 0)}</span></div>
+    <div class="bar" role="img" aria-label="Progresso para o objetivo FIRE: ${pct(Math.min(1, f.progresso))}"><div style="width:${Math.min(100, f.progresso * 100).toFixed(1)}%;background:var(--up)"></div></div>
+    <p class="muted2" style="font-size:13.5px;line-height:1.55;margin:12px 0 0">${isFinite(f.ganho100) && f.ganho100 >= .5 ? `Com mais 100 €/mês (${eur(pr.C + 100, 0)}) chegavas cerca de <strong>${NF0.format(Math.round(f.ganho100))} ano${Math.round(f.ganho100) === 1 ? "" : "s"} mais cedo</strong>. ` : ""}Probabilidade de lá chegar em 20 anos: <span class="mono">${pct(f.prob20)}</span>; em 30 anos: <span class="mono">${pct(f.prob30)}</span>.</p>
+    <p class="muted" style="font-size:12px;line-height:1.5;margin:8px 0 0">Em euros de hoje (inflação de 2%/ano), com ${eur(pr.C, 0)}/mês e a rentabilidade da projeção acima. A regra dos 4% diz que podes levantar 4% da carteira no 1.º ano e depois ajustar à inflação; para uma reforma muito longa, 3,5% ou 3% é mais prudente. Valores antes de impostos: em Portugal os ganhos levantados pagam IRS.</p>
+  </div>`;
 }
 const ymPT = ym => ym ? ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+ym.slice(5, 7) - 1] + " " + ym.slice(0, 4) : "";
 function projecaoBloco(ps){
@@ -1258,6 +1302,7 @@ async function pedirProjIA(){
     referenciaMercado:LONGO.ref ? {nome:LONGO.ref.nome, anos:LONGO.ref.anos, porAno:+(LONGO.ref.cagr * 100).toFixed(1)} : null,
     ativos:pr.ativos.map(a => ({ativo:a.sym, nome:a.nome, tipo:a.tipo, pesoPct:+(a.w * 100).toFixed(1), anosHistorico:a.st ? +a.st.anos.toFixed(1) : 0, historicoPorAno:a.st ? +(a.st.cagr * 100).toFixed(1) : null, usadoPorAno:+(a.esp * 100).toFixed(1), oscilacao:+(a.vol * 100).toFixed(1), piorQueda:a.st ? +(a.st.dd * 100).toFixed(0) : null})),
     cenarios:[5, 10, 20].map(a => ({anos:a, investido:Math.round(pr.curva[a].investido), pessimista:Math.round(pr.curva[a].p10), provavel:Math.round(pr.curva[a].p50), otimista:Math.round(pr.curva[a].p90)})),
+    fire:{despesasMes:pr.fire.gasto, taxaLevantamento:+(pr.fire.taxa * 100).toFixed(1), objetivo:Math.round(pr.fire.alvo), anoProvavel:quandoTxt(pr.fire.p50), anoPessimista:quandoTxt(pr.fire.p90), anoOtimista:quandoTxt(pr.fire.p10), idadeAtual:pr.fire.idade, prob20anosPct:Math.round(pr.fire.prob20 * 100), anosGanhosCom100EurMes:isFinite(pr.fire.ganho100) ? +pr.fire.ganho100.toFixed(1) : null},
     testePassado:pr.teste ? {desde:pr.teste.desde, porAno:+(pr.teste.cagr * 100).toFixed(1), indice:pr.teste.bench != null ? {nome:benchNome(), porAno:+(pr.teste.bench * 100).toFixed(1)} : null, piorQueda:+(pr.teste.dd * 100).toFixed(0), pior12meses:+(pr.teste.pior12 * 100).toFixed(0)} : null};
   try{ const r = await api("/api/projecao", {dados}, 300000); S.projIA = Object.assign({upd:Date.now()}, r); save(); toast("Comentário pronto."); }
   catch(e){ toast(e.message, 6000); }
@@ -1482,6 +1527,7 @@ function vExposicao(m){
   ${exposicaoRealBloco(ps)}
   ${planoBloco(ps)}
   ${projecaoBloco(ps)}
+  ${fireBloco(projecao(ps))}
   <details class="mais" ${store.get("cart.maisExp", false) ? "open" : ""} ontoggle="store.set('cart.maisExp', this.open); if (this.open) desenharExpDetalhe()">
   <summary>Ver mais detalhe: setores, ativos, classes e moedas</summary>
   <div class="row" style="margin-top:14px">
