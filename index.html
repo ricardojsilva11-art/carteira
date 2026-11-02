@@ -1115,6 +1115,155 @@ function planoBloco(ps){
 function setAlvo(s, v){ const a = alvos(), n = num(v); if (v === "" || !isFinite(n)) delete a[s]; else a[s] = Math.max(0, Math.min(100, n)); setCfg("alvo", a); }
 function alvosAtuais(){ const ps = posicoes().filter(p => p.qtd > 0 && p.temPreco), t = ps.reduce((s, p) => s + p.valor, 0) || 1, a = {}; ps.forEach(p => a[p.sym] = Math.round(p.valor / t * 1000) / 10); setCfg("alvo", a); }
 
+
+/* ---------- CRESCIMENTO PREVISTO (histórico + simulação) ---------- */
+let LONGO = store.get("cart.longo", {series:{}, ref:null, quando:0, chave:""});
+let PROJ_H = store.get("cart.projH", 10);
+async function atualizarLongo(forcar){
+  const syms = [...new Set(posicoes().filter(p => p.qtd > 0).map(p => p.sym).concat(benchSym() ? [benchSym()] : []))];
+  const chave = syms.slice().sort().join(","); if (!syms.length || !L.code || LONGO.aCarregar) return;
+  if (!forcar && LONGO.chave === chave && Date.now() - LONGO.quando < 3 * 864e5) return;
+  LONGO.aCarregar = true;
+  try{ const j = await api("/api/longo", {symbols:syms}, 120000); LONGO = {series:j.series, ref:j.ref, quando:Date.now(), chave}; store.set("cart.longo", LONGO); renderBg(); }
+  catch(e){ LONGO.erro = e.message; }
+  finally{ LONGO.aCarregar = false; }
+}
+function estat(m, anos){
+  const n = Math.min(m.length - 1, anos * 12); if (n < 24) return null;
+  const s = m.slice(-n - 1), r = [];
+  for (let i = 1; i < s.length; i++) r.push(Math.log(s[i][1] / s[i - 1][1]));
+  const mu = r.reduce((a, b) => a + b, 0) / r.length, sd = Math.sqrt(r.reduce((a, b) => a + (b - mu) ** 2, 0) / (r.length - 1));
+  let pico = s[0][1], dd = 0, quando = "";
+  s.forEach(([ym, v]) => { if (v > pico) pico = v; if (v / pico - 1 < dd){ dd = v / pico - 1; quando = ym; } });
+  return {anos:n / 12, cagr:Math.pow(s[s.length - 1][1] / s[0][1], 12 / n) - 1, vol:sd * Math.sqrt(12), dd, ddQuando:quando, desde:s[0][0]};
+}
+/* gerador aleatório com semente: a projeção não muda de cada vez que abres a página */
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function projecao(ps){
+  const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0);
+  if (!ab.length || !LONGO.quando) return null;
+  const M = LONGO.ref ? LONGO.ref.cagr : .09;
+  const ativos = ab.map(p => {
+    const sr = (LONGO.series[p.sym] || {}).m || [];
+    const fundo = eFundo(p), st = estat(sr, fundo ? 20 : 10), st10 = estat(sr, 10);
+    const pesoProprio = p.tipo === "Obrigações" ? 1 : fundo ? .5 : p.tipo === "Cripto" ? .2 : .3;
+    let esp = st && st.anos >= 3 ? pesoProprio * st.cagr + (1 - pesoProprio) * M : (p.tipo === "Obrigações" ? .03 : M);
+    esp = Math.max(-.02, Math.min(p.tipo === "Obrigações" ? .05 : .14, esp));
+    const vol = st10 ? st10.vol : st ? st.vol : (p.tipo === "Cripto" ? .7 : fundo ? .16 : .3);
+    return {sym:p.sym, nome:p.nome, tipo:p.tipo, w:p.valor / tot, st, esp, vol, m:sr};
+  });
+  /* correlações dos últimos 10 anos (retornos mensais em euros) */
+  const ret = a => { const o = new Map(); for (let i = Math.max(1, a.m.length - 120); i < a.m.length; i++) o.set(a.m[i][0], Math.log(a.m[i][1] / a.m[i - 1][1])); return o; };
+  const R = ativos.map(ret);
+  const corr = (i, j) => {
+    if (i === j) return 1;
+    const xs = [], ys = []; R[i].forEach((v, k) => { if (R[j].has(k)){ xs.push(v); ys.push(R[j].get(k)); } });
+    if (xs.length < 36) return ativos[i].tipo === "Cripto" || ativos[j].tipo === "Cripto" ? .3 : .7;
+    const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+    let sxy = 0, sxx = 0, syy = 0; xs.forEach((x, k) => { sxy += (x - mx) * (ys[k] - my); sxx += (x - mx) ** 2; syy += (ys[k] - my) ** 2; });
+    return sxx && syy ? sxy / Math.sqrt(sxx * syy) : .7;
+  };
+  let varP = 0;
+  ativos.forEach((a, i) => ativos.forEach((b, j) => { varP += a.w * b.w * a.vol * b.vol * corr(i, j); }));
+  const esp = ativos.reduce((s, a) => s + a.w * a.esp, 0), vol = Math.sqrt(Math.max(0, varP));
+  /* simulação: 2000 cenários mês a mês com o investimento mensal */
+  const C = S.cfg.projMensal != null && S.cfg.projMensal !== "" ? +S.cfg.projMensal : valorPlano();
+  const anos = 20, N = 2000, rnd = rng(42), mu = Math.log(1 + esp) / 12, sd = vol / Math.sqrt(12);
+  const porAno = Array.from({length:anos + 1}, () => []);
+  for (let k = 0; k < N; k++){
+    let v = tot; porAno[0].push(v);
+    for (let mth = 1; mth <= anos * 12; mth++){
+      const u1 = Math.max(1e-12, rnd()), u2 = rnd(), z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      v = v * Math.exp(mu - sd * sd / 2 + sd * z) + C;
+      if (mth % 12 === 0) porAno[mth / 12].push(v);
+    }
+  }
+  const q = (arr, p) => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(p * (s.length - 1))]; };
+  const curva = porAno.map((arr, i) => ({ano:i, p10:q(arr, .1), p50:q(arr, .5), p90:q(arr, .9), investido:tot + C * 12 * i}));
+  /* teste com o passado: estes pesos, reequilibrados todos os meses, nos últimos 10 anos */
+  let teste = null;
+  const comuns = ativos.filter(a => a.m.length > 37);
+  if (comuns.length){
+    const ini = comuns.map(a => a.m[Math.max(0, a.m.length - 121)][0]).sort().pop(), fim = comuns.map(a => a.m[a.m.length - 1][0]).sort()[0];
+    const wSoma = comuns.reduce((s, a) => s + a.w, 0), mapas = comuns.map(a => new Map(a.m));
+    const meses = comuns[0].m.map(x => x[0]).filter(ym => ym >= ini && ym <= fim && mapas.every(mp => mp.has(ym)));
+    if (meses.length > 36){
+      let v = 1, pico = 1, dd = 0, ddQ = ""; const serie = [[meses[0], 1]];
+      for (let i = 1; i < meses.length; i++){
+        const r = comuns.reduce((s, a, k) => s + a.w / wSoma * (mapas[k].get(meses[i]) / mapas[k].get(meses[i - 1]) - 1), 0);
+        v *= 1 + r; serie.push([meses[i], v]); if (v > pico) pico = v; if (v / pico - 1 < dd){ dd = v / pico - 1; ddQ = meses[i]; }
+      }
+      let pior = 0, pQ = "";
+      for (let i = 12; i < serie.length; i++){ const r = serie[i][1] / serie[i - 12][1] - 1; if (r < pior){ pior = r; pQ = serie[i][0]; } }
+      const n = meses.length - 1, b = (LONGO.series[benchSym()] || {}).m || [], bm = new Map(b);
+      const bIni = bm.get(meses[0]), bFim = bm.get(meses[n]);
+      teste = {desde:meses[0], anos:n / 12, cagr:Math.pow(v, 12 / n) - 1, dd, ddQ, pior12:pior, pior12Q:pQ, parcial:comuns.length < ativos.length,
+        bench:bIni && bFim ? Math.pow(bFim / bIni, 12 / n) - 1 : null};
+    }
+  }
+  return {tot, C, esp, vol, ativos, curva, teste, M};
+}
+const ymPT = ym => ym ? ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+ym.slice(5, 7) - 1] + " " + ym.slice(0, 4) : "";
+function projecaoBloco(ps){
+  setTimeout(() => atualizarLongo(), 40);
+  const pr = projecao(ps);
+  if (!pr) return `<div class="card" style="margin-bottom:14px"><h2>Crescimento previsto</h2><p class="muted" style="margin:0">${LONGO.erro ? esc(LONGO.erro) : "A carregar o histórico longo dos teus ativos…"}</p></div>`;
+  const H = PROJ_H, c = pr.curva[H], inf = Math.pow(1.02, H), ia = S.projIA;
+  return `<div class="card" style="margin-bottom:14px" id="proj">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h2 style="margin:0">Crescimento previsto</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <label class="f" style="flex-direction:row;align-items:center;gap:8px">Por mês<input class="in mono" style="width:90px;min-height:36px" inputmode="decimal" value="${NF0.format(pr.C).replace(/\s/g, "")}" onchange="setCfg('projMensal', num(this.value) >= 0 ? num(this.value) : '')"> €</label>
+        <div class="seg" role="group" aria-label="Horizonte">${[5, 10, 20].map(a => `<button type="button" class="${H === a ? "on" : ""}" onclick="PROJ_H=${a};store.set('cart.projH',${a});render()">${a} anos</button>`).join("")}</div>
+      </div></div>
+    <div class="metrics" style="margin-bottom:12px">
+      <div><span class="n">Provável daqui a ${H} anos</span><span class="v mono">${eur(c.p50, 0)}</span><span class="sub">≈ ${eur(c.p50 / inf, 0)} em euros de hoje</span></div>
+      <div><span class="n">Pessimista (1 em 10)</span><span class="v mono">${eur(c.p10, 0)}</span></div>
+      <div><span class="n">Otimista (1 em 10)</span><span class="v mono">${eur(c.p90, 0)}</span></div>
+      <div><span class="n">Total investido até lá</span><span class="v mono">${eur(c.investido, 0)}</span><span class="sub">hoje ${eur(pr.tot, 0)} + ${eur(pr.C, 0)}/mês</span></div>
+    </div>
+    <div class="chartbox" style="height:240px"><canvas id="cProj" role="img" aria-label="Projeção do valor da carteira: cenário provável, pessimista e otimista"></canvas></div>
+    <p class="muted2" style="font-size:13.5px;line-height:1.55;margin:12px 0 0">Base: rentabilidade esperada <span class="mono">${pct(pr.esp)}</span>/ano e oscilação típica <span class="mono">${pct(pr.vol)}</span>/ano, a partir do histórico de cada ativo.
+    ${pr.teste ? ` Com estes pesos, desde ${ymPT(pr.teste.desde)}: <span class="mono ${tone(pr.teste.cagr)}">${pctS(pr.teste.cagr)}</span>/ano${pr.teste.bench != null ? ` (${esc(benchNome())}: <span class="mono">${pctS(pr.teste.bench)}</span>)` : ""}, pior queda <span class="mono down">${pct(pr.teste.dd)}</span> (${ymPT(pr.teste.ddQ)}).${pr.teste.parcial ? " Ativos com pouco histórico ficaram de fora deste teste." : ""}` : ""}</p>
+    <details class="mais" style="margin-top:12px"><summary>Como foi calculado</summary>
+      <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Ativo</th><th class="r">Peso</th><th class="r">Histórico</th><th class="r">Por ano</th><th class="r">Usado</th><th class="r">Oscilação</th></tr></thead><tbody>
+      ${pr.ativos.map(a => `<tr><td><span class="tk">${esc(a.sym)}</span> <span class="sub">${esc(a.tipo)}</span></td><td class="r mono">${pct(a.w)}</td><td class="r mono muted2">${a.st ? NF0.format(a.st.anos) + " anos" : "curto"}</td><td class="r mono">${a.st ? pctS(a.st.cagr) : "—"}</td><td class="r mono" style="font-weight:600">${pct(a.esp)}</td><td class="r mono muted2">${pct(a.vol)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="muted" style="font-size:12.5px;line-height:1.55;margin:10px 0 0">Histórico mensal em euros, com dividendos, até 20 anos (ETFs) ou 10 anos (ações). Como o passado de uma ação raramente se repete, a rentabilidade usada mistura o histórico de cada ativo com a média de longo prazo do mercado${pr.M ? ` (${esc((LONGO.ref || {}).nome || "S&P 500")}, ${pct(pr.M)}/ano em ${(LONGO.ref || {}).anos || 30} anos)` : ""}: 50% nos ETFs, 30% nas ações, com um máximo de 14%/ano. A simulação faz 2000 cenários mês a mês, com o investimento mensal e as correlações entre os ativos. Valores antes de impostos.</p>
+    </details>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="ai"><svg class="i" style="width:16px;height:16px"><use href="#i-ia"/></svg>COMENTÁRIO DA IA${ia && ia.quando ? " · " + new Date(ia.quando).toLocaleDateString("pt-PT") : ""}</div>
+      ${PEND.proj ? `<button class="btn sm" disabled><span class="spin" aria-hidden="true"></span> A analisar… <span data-t0="${PEND.proj}">${tempoTxt(PEND.proj)}</span></button>` : `<button class="btn sm" onclick="pedirProjIA()">${ia ? "Atualizar comentário" : "Pedir comentário da IA"}</button>`}</div>
+      ${ia ? `<p style="line-height:1.55;margin:10px 0 6px">${esc(ia.resumo)}</p>${ia.realismo ? `<p class="muted2" style="line-height:1.55;margin:0 0 8px;font-size:14px">${esc(ia.realismo)}</p>` : ""}
+        <div class="row" style="margin:0;gap:18px">${[["A reter", ia.pontos], ["Riscos", ia.riscos], ["Para melhorar", ia.melhorar]].filter(x => (x[1] || []).length).map(([t, l]) => `<div style="flex:1 1 220px;min-width:0"><div class="lab" style="font-size:12px;font-weight:600;color:var(--txt3);margin-bottom:4px">${t}</div><ul style="margin:0;padding-left:18px;line-height:1.55;font-size:14px">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div>
+        ${(ia.fontes || []).length ? `<div class="srcs" style="margin-top:8px">${ia.fontes.slice(0, 5).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>`).join("")}</div>` : ""}`
+      : `<p class="muted" style="font-size:13px;margin:8px 0 0">A IA interpreta estes números e compara-os com as previsões de longo prazo das grandes gestoras.</p>`}
+    </div>
+  </div>`;
+}
+function desenharProj(){
+  const pr = projecao(posicoes()); if (!pr || !document.getElementById("cProj")) return;
+  const cv = pr.curva.slice(0, PROJ_H + 1), lab = cv.map(x => x.ano === 0 ? "hoje" : x.ano + (x.ano === 1 ? " ano" : " anos"));
+  const o = baseOpts(); o.scales.y.ticks.callback = v => NF0.format(v) + " €"; o.plugins.tooltip.callbacks = {label:c => ` ${c.dataset.label}: ${eur(c.parsed.y, 0)}`};
+  mkChart("cProj", {type:"line", data:{labels:lab, datasets:[
+    {label:"Pessimista", data:cv.map(x => Math.round(x.p10)), borderColor:"#6EA8FE55", borderWidth:1, pointRadius:0, fill:false},
+    {label:"Otimista", data:cv.map(x => Math.round(x.p90)), borderColor:"#6EA8FE55", borderWidth:1, pointRadius:0, fill:"-1", backgroundColor:"#6EA8FE22"},
+    {label:"Provável", data:cv.map(x => Math.round(x.p50)), borderColor:"#6EA8FE", borderWidth:2.4, pointRadius:0, fill:false},
+    {label:"Investido", data:cv.map(x => Math.round(x.investido)), borderColor:cssv("--txt3"), borderDash:[5, 5], borderWidth:1.5, pointRadius:0, fill:false}
+  ]}, options:o});
+}
+async function pedirProjIA(){
+  const pr = projecao(posicoes()); if (!pr || PEND.proj) return;
+  PEND.proj = Date.now(); render();
+  const dados = {valorAtual:Math.round(pr.tot), investimentoMensal:pr.C, rentabilidadeEsperadaAno:+(pr.esp * 100).toFixed(1), oscilacaoAno:+(pr.vol * 100).toFixed(1),
+    referenciaMercado:LONGO.ref ? {nome:LONGO.ref.nome, anos:LONGO.ref.anos, porAno:+(LONGO.ref.cagr * 100).toFixed(1)} : null,
+    ativos:pr.ativos.map(a => ({ativo:a.sym, nome:a.nome, tipo:a.tipo, pesoPct:+(a.w * 100).toFixed(1), anosHistorico:a.st ? +a.st.anos.toFixed(1) : 0, historicoPorAno:a.st ? +(a.st.cagr * 100).toFixed(1) : null, usadoPorAno:+(a.esp * 100).toFixed(1), oscilacao:+(a.vol * 100).toFixed(1), piorQueda:a.st ? +(a.st.dd * 100).toFixed(0) : null})),
+    cenarios:[5, 10, 20].map(a => ({anos:a, investido:Math.round(pr.curva[a].investido), pessimista:Math.round(pr.curva[a].p10), provavel:Math.round(pr.curva[a].p50), otimista:Math.round(pr.curva[a].p90)})),
+    testePassado:pr.teste ? {desde:pr.teste.desde, porAno:+(pr.teste.cagr * 100).toFixed(1), indice:pr.teste.bench != null ? {nome:benchNome(), porAno:+(pr.teste.bench * 100).toFixed(1)} : null, piorQueda:+(pr.teste.dd * 100).toFixed(0), pior12meses:+(pr.teste.pior12 * 100).toFixed(0)} : null};
+  try{ const r = await api("/api/projecao", {dados}, 300000); S.projIA = Object.assign({upd:Date.now()}, r); save(); toast("Comentário pronto."); }
+  catch(e){ toast(e.message, 6000); }
+  finally{ PEND.proj = null; render(); }
+}
+
 /* ---------- LIGAÇÃO À APP dia. ---------- */
 let DIA = store.get("cart.dia", {mes:null, erro:"", quando:0});
 const diaCfg = () => S.cfg.dia || {};
@@ -1332,6 +1481,7 @@ function vExposicao(m){
   ${chipsCorretora()}
   ${exposicaoRealBloco(ps)}
   ${planoBloco(ps)}
+  ${projecaoBloco(ps)}
   <details class="mais" ${store.get("cart.maisExp", false) ? "open" : ""} ontoggle="store.set('cart.maisExp', this.open); if (this.open) desenharExpDetalhe()">
   <summary>Ver mais detalhe: setores, ativos, classes e moedas</summary>
   <div class="row" style="margin-top:14px">
@@ -1348,6 +1498,7 @@ function vExposicao(m){
   </details>`;
   window.desenharExpDetalhe = () => { donutChart("cSet2", ex.setores, COR_SETOR); donutChart("cAt", ex.ativos.map(a => [a[0], a[1]]), cores); };
   if (store.get("cart.maisExp", false)) desenharExpDetalhe();
+  desenharProj();
 }
 
 /* ---------- ANÁLISE ---------- */
@@ -1484,7 +1635,7 @@ async function pedirAnalise(sym, forcar){
 }
 
 /* ---------- pedidos à IA em curso ---------- */
-const PEND = {sug:null, an:{}, res:null}, ERRO = {sug:"", an:{}};
+const PEND = {sug:null, an:{}, res:null, proj:null}, ERRO = {sug:"", an:{}};
 const segs = t0 => Math.round((Date.now() - t0) / 1000);
 const tempoTxt = t0 => { const s = segs(t0); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s"; };
 setInterval(() => document.querySelectorAll("[data-t0]").forEach(el => el.textContent = tempoTxt(+el.dataset.t0)), 1000);

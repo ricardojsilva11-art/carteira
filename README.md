@@ -14,6 +14,7 @@ App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincr
 - Rentabilidade ponderada no tempo, TIR anual e comparação com o MSCI World / S&P 500 / FTSE All-World.
 - Separação por corretora, lista de ativos a seguir, calendário de dividendos e resultados, resumo semanal com IA.
 - Notificações (Web Push): alertas de preço, variações fortes, dividendos (data ex e pagamento), resultados e resumo de domingo.
+- Crescimento previsto: simulação a 5/10/20 anos com o histórico mensal de cada ativo (em euros, com dividendos), teste com os últimos 10 anos e comentário da IA.
 - Avisos de dados em falta (extratos por importar, compras repetidas, vendas sem compra, dividendos por registar).
 - Tema claro e escuro; instalável no ecrã principal do iPhone.
 

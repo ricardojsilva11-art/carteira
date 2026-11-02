@@ -11,6 +11,8 @@
    - POST /api/calendario  dividendos (anunciados e estimados) e resultados
    - POST /api/composicao  posições, países e setores dentro de um ETF (IA + justETF)
    - POST /api/resumo     resumo semanal da carteira com IA
+   - POST /api/longo      histórico mensal longo (com dividendos, em euros) para a projeção
+   - POST /api/projecao   comentário da IA sobre a projeção de crescimento
    - POST /api/push/*     notificações no iPhone e no PC (Web Push)
    - cron (de 15 em 15 min): alertas de preço, variações, dividendos, resultados e resumo de domingo
    Ligações: D1 «DB» (obrigatória). Segredo: ANTHROPIC_API_KEY (para a IA).
@@ -20,7 +22,7 @@ const CORS = {"access-control-allow-origin":"*", "access-control-allow-methods":
 const json = (o, status = 200) => new Response(JSON.stringify(o), {status, headers:Object.assign({"content-type":"application/json; charset=utf-8"}, CORS)});
 const err = (msg, status) => Object.assign(new Error(msg), {status});
 const lisbonDay = (d = new Date()) => new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Lisbon"}).format(d);
-const SINGLES = ["sugestoes"];
+const SINGLES = ["sugestoes", "projIA"];
 const SETORES = ["Tecnologia","Saúde","Financeiro","Consumo cíclico","Consumo básico","Industrial","Energia","Materiais","Imobiliário","Comunicações","Utilities","Cripto","Obrigações","Outros"];
 
 async function sha(s){
@@ -573,6 +575,55 @@ Responde APENAS com JSON:
   return res;
 }
 
+
+/* ============================================================
+   HISTÓRICO LONGO (mensal, com dividendos, em euros) e projeção com IA
+   ============================================================ */
+async function serieMensal(env, sym){
+  const ck = `lm:${sym}`;
+  const hit = await cacheGet(env, ck, 7 * 864e5); if (hit) return hit;
+  const j = await yahoo(`/v8/finance/chart/${encodeURIComponent(sym)}?range=max&interval=1mo&events=div%2Csplit`);
+  const r = j && j.chart && j.chart.result && j.chart.result[0]; if (!r) throw err(`Sem histórico para ${sym}.`, 404);
+  const ts = r.timestamp || [], ind = r.indicators || {}, adj = ((ind.adjclose || [{}])[0] || {}).adjclose, cl = ((ind.quote || [{}])[0] || {}).close || [];
+  const porMes = new Map();
+  ts.forEach((t, i) => { const v = adj && adj[i] != null ? adj[i] : cl[i]; if (v != null && isFinite(v) && v > 0) porMes.set(new Date(t * 1000).toISOString().slice(0, 7), +(+v).toPrecision(7)); });
+  const out = {sym, moeda:(r.meta || {}).currency || "", m:[...porMes.entries()].sort((a, b) => a[0].localeCompare(b[0]))};
+  if (out.m.length) out.m.pop();   /* o mês em curso ainda não fechou */
+  await cachePut(env, ck, out);
+  return out;
+}
+async function longo(env, body){
+  const syms = [...new Set((body.symbols || []).map(s => String(s).trim()).filter(symOk))].slice(0, 25);
+  const series = {}, erros = {};
+  await Promise.all(syms.map(async s => { try{ series[s] = await serieMensal(env, s); }catch(e){ erros[s] = e.message; } }));
+  /* converte para euros (meses sem câmbio: fica a variação na moeda original) */
+  const moedas = [...new Set(Object.values(series).map(x => x.moeda === "GBp" || x.moeda === "GBX" ? "GBP" : x.moeda).filter(m => m && m !== "EUR"))];
+  const fx = {};
+  for (const c of moedas){ try{ fx[c] = new Map((await serieMensal(env, `${c}EUR=X`)).m); }catch(e){} }
+  const res = {};
+  Object.values(series).forEach(x => {
+    const c = x.moeda === "GBp" || x.moeda === "GBX" ? "GBP" : x.moeda, esc = c !== x.moeda ? .01 : 1, f = fx[c];
+    let ult = null; const pf = f ? [...f.values()][0] : 1;
+    res[x.sym] = {moeda:x.moeda, m:x.m.map(([ym, v]) => { let t = 1; if (c && c !== "EUR"){ t = f && f.get(ym) ? (ult = f.get(ym)) : (ult || pf); } return [ym, +(v * esc * t).toPrecision(7)]; })};
+  });
+  /* referência de longo prazo: fundo Vanguard 500 (S&P 500 com dividendos, desde 1980), em dólares */
+  let ref = null;
+  try{
+    const v = await serieMensal(env, "VFINX"), m = v.m, n = Math.min(360, m.length - 1);
+    if (n > 120) ref = {nome:"S&P 500 com dividendos (Vanguard 500)", anos:Math.round(n / 12), cagr:Math.pow(m[m.length - 1][1] / m[m.length - 1 - n][1], 12 / n) - 1};
+  }catch(e){}
+  return {series:res, ref, erros};
+}
+async function projecaoIA(env, key, body){
+  await limiteIA(env, key);
+  const system = `És um consultor financeiro que explica, a um investidor particular em Portugal (português europeu, claro e sem jargão), uma projeção do crescimento da sua carteira.
+Recebes os números já calculados pela app: pesos, histórico de cada ativo (rentabilidade anual e volatilidade), o retorno esperado usado, a simulação (pessimista/provável/otimista) e o teste com os últimos anos. Pesquisa as previsões de longo prazo mais recentes das grandes gestoras (Vanguard, J.P. Morgan, BlackRock, Morningstar) para ações globais e dos EUA, e compara.
+Responde APENAS com JSON: {"resumo":"3-4 frases: o que esperar, em números redondos","realismo":"1-2 frases: os pressupostos são prudentes, razoáveis ou otimistas face às previsões das gestoras (cita os números)","pontos":["frase curta"],"riscos":["frase curta"],"melhorar":["frase curta: o que mudaria a projeção para melhor (custos, diversificação, investimento mensal, tempo)"]}
+Regras: 3 a 5 itens por lista; usa só os números dados e os que encontrares; lembra que o passado não garante o futuro, sem repetir avisos; não dês ordens de compra ou venda.`;
+  const {out, fontes} = await claude(env, system, `Dados da projeção (JSON): ${JSON.stringify(body.dados || {}).slice(0, 12000)}\nHoje é ${lisbonDay()}.`, {maxTokens:3000, searches:3});
+  return {quando:Date.now(), resumo:String(out.resumo || ""), realismo:String(out.realismo || ""), pontos:(out.pontos || []).slice(0, 6), riscos:(out.riscos || []).slice(0, 6), melhorar:(out.melhorar || []).slice(0, 6), fontes:fontes.slice(0, 8)};
+}
+
 /* ============================================================
    CARTEIRA NO SERVIDOR (para alertas e resumo)
    ============================================================ */
@@ -849,6 +900,13 @@ export default {
       if (p === "/api/importar") return json(await importar(env, key, body));
       if (p === "/api/calendario") return json(await calendario(env, body));
       if (p === "/api/composicao") return json(await composicao(env, key, body));
+      if (p === "/api/longo") return json(await longo(env, body));
+      if (p === "/api/projecao"){
+        const r = await projecaoIA(env, key, body);
+        const st = await getVal(env, key);
+        if (st){ st.projIA = Object.assign({upd:Date.now()}, r); await putVal(env, key, st); }
+        return json(r);
+      }
       if (p === "/api/resumo") return json(await resumoSemanal(env, key, await getVal(env, key), false));
       if (p.startsWith("/api/push/")){
         await ensure(env);
