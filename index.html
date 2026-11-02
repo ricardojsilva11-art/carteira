@@ -837,9 +837,12 @@ function vPosicoes(m){
   <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca nos títulos das colunas para ordenar e numa posição para ver a ficha.</p></div>
   ${fechadas.length ? `<div class="card" style="margin-bottom:14px"><h2>Posições fechadas</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Resultado realizado</th></tr></thead><tbody>${fechadas.map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></td><td class="r mono ${tone(p.realizado)}">${eurS(p.realizado)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
   <div class="card"><h2>Movimentos</h2><div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th>Operação</th><th class="r">Quantidade</th><th class="r">Total (€)</th><th class="r">Preço médio</th><th></th></tr></thead><tbody>
-  ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym || "Conta")}</td><td><span class="pill ${o.tipo === "venda" || TIPOS_CUSTO.includes(o.tipo) ? "down" : o.tipo === "dividendo" ? "" : "up"}">${({venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"})[o.tipo] || "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${TIPOS_CAPITAL.includes(o.tipo) ? esc(String(o.qtd).replace(".", ",")) : "—"}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${TIPOS_CAPITAL.includes(o.tipo) && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
-  </tbody></table></div></div>`;
+  ${ops.slice(0, nMov).map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym || "Conta")}</td><td><span class="pill ${o.tipo === "venda" || TIPOS_CUSTO.includes(o.tipo) ? "down" : o.tipo === "dividendo" ? "" : "up"}">${({venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"})[o.tipo] || "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${TIPOS_CAPITAL.includes(o.tipo) ? esc(String(o.qtd).replace(".", ",")) : "—"}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${TIPOS_CAPITAL.includes(o.tipo) && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
+  </tbody></table></div>
+  ${ops.length > nMov ? `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px"><span class="muted" style="font-size:13px">A mostrar ${nMov} de ${ops.length}</span><button class="btn sm" onclick="nMov+=30;render()">Ver mais 30</button><button class="btn sm" onclick="nMov=1e9;render()">Ver todos</button></div>` : ops.length > 30 ? `<button class="btn sm" style="margin-top:12px" onclick="nMov=30;render()">Mostrar só os 30 mais recentes</button>` : ""}
+  <div style="margin-top:10px"><button class="btn sm" onclick="exportarCSV()">Exportar movimentos (CSV)</button></div></div>`;
 }
+let nMov = 30;
 /* compras repetidas (à mão + importada) e vendas sem compra registada */
 function duplicadosProvaveis(){
   const cs = vivos("ops").filter(o => o.tipo === "compra"), out = [];
@@ -1951,8 +1954,10 @@ function vDefinicoes(m){
     <div class="seg" role="group" aria-label="Índice de comparação" style="align-self:flex-start">${BENCH.map(([s, n]) => `<button type="button" class="${benchSym() === s ? "on" : ""}" onclick="setCfg('bench','${s}');atualizarPrecos(true)">${n}</button>`).join("")}</div>
     <h2 style="margin:6px 0 0">Corretoras</h2>
     <ul class="legend">${corretoras().map(c => `<li><span>${esc(c)} <span class="sub">${vivos("ops").filter(o => corretoraDe(o) === c).length} movimentos</span></span><button class="btn sm" onclick="renomearCorretora('${esc(c)}')">Mudar nome</button></li>`).join("")}</ul>
-    <h2 style="margin:6px 0 0">Cópia dos dados</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="exportar()">Exportar (JSON)</button><label class="btn" style="cursor:pointer">Importar<input type="file" accept="application/json" class="hide" onchange="importar(this.files[0])"></label></div>
+    <h2 style="margin:6px 0 0">Os teus dados</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="exportar()">Cópia completa (JSON)</button><button class="btn" onclick="exportarCSV()">Movimentos (CSV)</button><label class="btn" style="cursor:pointer">Importar cópia (JSON)<input type="file" accept="application/json,.json" class="hide" onchange="importar(this.files[0]);this.value=''"></label></div>
+    <p class="muted" style="font-size:12.5px;margin:0;line-height:1.5">O CSV abre no Excel. A importação mostra primeiro o que muda e nunca apaga nada.</p>
+    ${copiasBloco()}
     <p class="muted" style="font-size:13px;margin:0;line-height:1.5">No iPhone: abre a app no Safari, toca em Partilhar › Adicionar ao ecrã principal.</p>
   </div>
   </div>`;
@@ -1980,12 +1985,102 @@ async function guardarLigacao(){
 }
 function setTema(t){ L.tema = t; store.set("cart.local", L); render(); }
 function copiar(t){ navigator.clipboard.writeText(t).then(() => toast("Copiado."), () => toast("Não foi possível copiar.")); }
-function exportar(){ const b = new Blob([JSON.stringify(S, null, 2)], {type:"application/json"}), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `carteira-${hoje()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+function exportar(){ descarregar(`carteira-${hoje()}.json`, JSON.stringify(S, null, 2), "application/json"); }
+/* ---------- EXPORTAR / IMPORTAR / CÓPIAS DE SEGURANÇA ---------- */
+function descarregar(nome, txt, tipo){ const b = new Blob([txt], {type:tipo}), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+function exportarCSV(){
+  const cel = v => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const n = v => v == null || v === "" ? "" : String(+v).replace(".", ",");   /* Excel em português: vírgula decimal, «;» a separar */
+  const nomes = {compra:"Compra", venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"};
+  const linhas = [["Data","Tipo","Ativo","Nome","Quantidade","Total (€)","Preço por unidade (€)","Imposto retido (€)","Corretora","Nota"]];
+  vivos("ops").slice().sort((a, b) => (a.data || "").localeCompare(b.data || "") || (a.criado || 0) - (b.criado || 0)).forEach(o => {
+    const a = ativo(o.sym) || {};
+    linhas.push([o.data, nomes[o.tipo] || o.tipo, o.sym || "Conta", a.nome || "", TIPOS_CAPITAL.includes(o.tipo) ? n(o.qtd) : "", n(o.total), TIPOS_CAPITAL.includes(o.tipo) && +o.qtd ? n(+(o.total / o.qtd).toFixed(6)) : "", o.tipo === "dividendo" && o.imposto ? n(o.imposto) : "", corretoraDe(o), o.nota || ""]);
+  });
+  descarregar(`carteira-movimentos-${hoje()}.csv`, "\ufeff" + linhas.map(l => l.map(cel).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+  toast(`${linhas.length - 1} movimentos exportados.`);
+}
+/* valida um estado vindo de um ficheiro ou de uma cópia; devolve só itens com a forma certa */
+function validarEstado(d){
+  if (!d || typeof d !== "object" || !Array.isArray(d.ops)) throw new Error("O ficheiro não é uma cópia da Carteira.");
+  const erros = [];
+  const ops = d.ops.filter(o => {
+    const ok = o && typeof o.id === "string" && ["compra","venda","dividendo","comissao","imposto"].includes(o.tipo) && /^\d{4}-\d{2}-\d{2}$/.test(o.data || "") && isFinite(+o.total) && +o.total >= 0 && (!TIPOS_CAPITAL.includes(o.tipo) || +o.qtd > 0 || o.del) && (o.sym || TIPOS_CUSTO.includes(o.tipo));
+    if (!ok && o) erros.push(o.id || "?"); return ok;
+  });
+  const ativos = (Array.isArray(d.ativos) ? d.ativos : []).filter(a => a && typeof a.id === "string");
+  return {ops, ativos, erros};
+}
+const semMeta = o => { const x = Object.assign({}, o); delete x.upd; return JSON.stringify(x, Object.keys(x).sort()); };
+let PREV = null;
+function previsualizar(d, origem){
+  let v; try{ v = validarEstado(d); }catch(e){ return toast(e.message, 5000); }
+  const atual = new Map((S.ops || []).map(o => [o.id, o]));
+  const novos = [], apagados = [], diferentes = [];
+  v.ops.filter(o => !o.del).forEach(o => {
+    const a = atual.get(o.id);
+    if (!a) novos.push(o); else if (a.del) apagados.push(o); else if (semMeta(a) !== semMeta(o)) diferentes.push(o);
+  });
+  const ficam = vivos("ops").filter(o => !v.ops.some(x => x.id === o.id && !x.del)).length;
+  const ativosNovos = v.ativos.filter(a => !a.del && !ativo(a.id));
+  PREV = {novos, apagados, diferentes, ativosNovos, origem};
+  const linha = o => `<li class="mono" style="font-size:12.5px">${dataPT(o.data)} · ${esc(({compra:"Compra", venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"})[o.tipo])} · ${esc(o.sym || "Conta")} · ${eur(o.total)}</li>`;
+  const grupo = (id, tit, lista, marcado, txt) => lista.length ? `<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)"><input type="checkbox" id="${id}" ${marcado ? "checked" : ""} style="margin-top:4px"><span style="flex:1"><strong>${tit} (${lista.length})</strong><br><span class="muted2" style="font-size:13px">${txt}</span>
+    <details><summary class="sub" style="cursor:pointer">ver</summary><ul style="margin:6px 0 0;padding-left:16px;max-height:160px;overflow:auto">${lista.slice(0, 200).map(linha).join("")}</ul></details></span></label>` : "";
+  const nada = !novos.length && !apagados.length && !diferentes.length && !ativosNovos.length;
+  dlg(`<h3 tabindex="-1" autofocus style="outline:none">${esc(origem)}</h3>
+  <p class="muted2" style="margin:0;font-size:14px;line-height:1.5">${v.ops.filter(o => !o.del).length} movimentos na cópia · ${vivos("ops").length} na app agora. ${ficam ? `${ficam} movimento${ficam === 1 ? "" : "s"} da app não existe${ficam === 1 ? "" : "m"} na cópia e fica${ficam === 1 ? "" : "m"} como está${ficam === 1 ? "" : "ão"}.` : ""}</p>
+  ${v.erros.length ? `<div class="warn">${v.erros.length} movimento${v.erros.length === 1 ? "" : "s"} com dados inválidos foi ignorado.</div>` : ""}
+  ${nada ? `<div class="warn" style="color:var(--txt2);background:var(--bg2,rgba(127,127,127,.08))">Não há nada para importar: a app já tem tudo o que está nesta cópia.</div>` : `
+  <div>${grupo("pvN", "Movimentos novos", novos, true, "Não existem na app. São acrescentados.")}
+  ${grupo("pvA", "Movimentos que apagaste", apagados, false, "Existem na cópia mas foram apagados na app. Marca para os recuperar.")}
+  ${grupo("pvD", "Movimentos diferentes", diferentes, false, "Existem nos dois lados com valores diferentes. Marca para usar a versão da cópia (a da app é guardada numa cópia de segurança antes).")}
+  ${ativosNovos.length ? `<p class="muted" style="font-size:13px;margin:8px 0 0">Também são acrescentados ${ativosNovos.length} ativo${ativosNovos.length === 1 ? "" : "s"} com setores e nome.</p>` : ""}</div>`}
+  <p class="muted" style="font-size:12.5px;margin:0;line-height:1.5">Nada é apagado. Antes de aplicar, a app guarda uma cópia de segurança do estado atual${L.code ? " no servidor" : " neste aparelho"}.</p>
+  <div class="acts"><button class="btn" onclick="fecharDlg()">Cancelar</button>${nada ? "" : `<button class="btn pri" onclick="aplicarImport()">Aplicar</button>`}</div>`, true);
+}
+async function aplicarImport(){
+  if (!PREV) return;
+  const sel = [].concat($("#pvN") && $("#pvN").checked ? PREV.novos : [], $("#pvA") && $("#pvA").checked ? PREV.apagados : [], $("#pvD") && $("#pvD").checked ? PREV.diferentes : []);
+  if (!sel.length && !PREV.ativosNovos.length) return toast("Não escolheste nada para importar.");
+  /* cópia do estado atual antes de mudar */
+  store.set("cart.antesImport", {quando:Date.now(), estado:S});
+  if (L.code){ try{ await sync(); await api("/api/copiar", {motivo:"antes de importar"}); }catch(e){ if (!confirm("Não foi possível guardar a cópia de segurança no servidor (" + e.message + "). Foi guardada neste aparelho. Continuar?")) return; } }
+  const now = Date.now();
+  sel.forEach(o => { const x = Object.assign({}, o, {upd:now}); delete x.del; const i = S.ops.findIndex(y => y.id === x.id); if (i >= 0) S.ops[i] = x; else S.ops.push(x); });
+  PREV.ativosNovos.forEach(a => { if (!Array.isArray(S.ativos)) S.ativos = []; S.ativos.push(Object.assign({}, a, {upd:now})); });
+  save(); fecharDlg(); render(); atualizarPrecos(true);
+  toast(`${sel.length} movimento${sel.length === 1 ? "" : "s"} importado${sel.length === 1 ? "" : "s"}.`, 4000);
+  PREV = null; COPIAS = null;
+}
 function importar(f){
   if (!f) return; const r = new FileReader();
-  r.onload = () => { try{ const d = JSON.parse(r.result); if (!Array.isArray(d.ops)) throw 0; const now = Date.now(); ["ops","ativos","analises"].forEach(c => (d[c] || []).forEach(x => { x.upd = now; const i = S[c].findIndex(y => y.id === x.id); if (i >= 0) S[c][i] = x; else S[c].push(x); })); save(); render(); atualizarPrecos(true); toast("Dados importados."); }catch(e){ toast("Ficheiro inválido."); } };
+  r.onload = () => { let d; try{ d = JSON.parse(r.result); }catch(e){ return toast("O ficheiro não é um JSON válido.", 5000); } previsualizar(d, `Importar «${f.name}»`); };
   r.readAsText(f);
 }
+let COPIAS = null;
+async function carregarCopias(){
+  if (!L.code) return;
+  COPIAS = {a:true, lista:(COPIAS || {}).lista || []}; renderBg();
+  try{ const r = await api("/api/copias", {}); COPIAS = {lista:r.copias || []}; }catch(e){ COPIAS = {lista:[], erro:e.message}; }
+  renderBg();
+}
+function copiasBloco(){
+  if (!L.code) return `<p class="muted" style="font-size:12.5px;margin:0">As cópias de segurança automáticas ficam no servidor quando ligares a sincronização.</p>`;
+  if (!COPIAS) setTimeout(carregarCopias, 30);
+  const l = (COPIAS && COPIAS.lista) || [], mostrar = verTodasCopias ? l : l.slice(0, 5);
+  return `<h2 style="margin:10px 0 0">Cópias de segurança</h2>
+    <p class="muted" style="font-size:12.5px;margin:0;line-height:1.5">O servidor guarda automaticamente o estado antes da primeira alteração de cada dia (últimos 30 dias) e antes de cada importação.</p>
+    ${COPIAS && COPIAS.erro ? `<div class="warn" style="margin:0">${esc(COPIAS.erro)}</div>` : ""}
+    ${l.length ? `<ul class="legend">${mostrar.map(c => `<li><span><span class="mono">${esc(c.data)}</span> <span class="sub">${c.movimentos} movimentos</span></span><span style="display:flex;gap:6px"><button class="btn sm" onclick="baixarCopia('${esc(c.data)}')">Descarregar</button><button class="btn sm" onclick="recuperarCopia('${esc(c.data)}')">Recuperar…</button></span></li>`).join("")}</ul>
+      ${l.length > 5 ? `<button class="btn sm" style="align-self:flex-start" onclick="verTodasCopias=!verTodasCopias;render()">${verTodasCopias ? "Mostrar menos" : `Ver todas (${l.length})`}</button>` : ""}` : `<p class="muted" style="font-size:13px;margin:0">${COPIAS && COPIAS.a ? "A carregar…" : "Ainda não há cópias."}</p>`}
+    <div><button class="btn sm" onclick="copiaAgora()">Fazer cópia agora</button></div>`;
+}
+let verTodasCopias = false;
+async function copiaAgora(){ try{ await sync(); const r = await api("/api/copiar", {motivo:"manual"}); toast("Cópia guardada: " + r.data); COPIAS = null; render(); }catch(e){ toast(e.message, 5000); } }
+async function obterCopia(data){ const r = await api("/api/copia", {data}); return r.estado; }
+async function baixarCopia(data){ try{ const st = await obterCopia(data); descarregar(`carteira-copia-${data.replace(/[^0-9a-z-]+/gi, "-")}.json`, JSON.stringify(st, null, 2), "application/json"); }catch(e){ toast(e.message, 5000); } }
+async function recuperarCopia(data){ try{ const st = await obterCopia(data); previsualizar(st, `Recuperar a cópia de ${data}`); }catch(e){ toast(e.message, 5000); } }
 
 /* ---------- arranque ---------- */
 aplicarTema();

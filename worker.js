@@ -39,7 +39,8 @@ async function ensure(env){
     env.DB.prepare("CREATE TABLE IF NOT EXISTS estado (k TEXT PRIMARY KEY, v TEXT NOT NULL, upd INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, v TEXT NOT NULL, t INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS subs (endpoint TEXT PRIMARY KEY, k TEXT NOT NULL, sub TEXT NOT NULL, nome TEXT, upd INTEGER)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS enviados (id TEXT PRIMARY KEY, t INTEGER)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS enviados (id TEXT PRIMARY KEY, t INTEGER)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS copias (k TEXT NOT NULL, data TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY (k, data))")
   ]);
   ready = true;
 }
@@ -48,6 +49,14 @@ async function putVal(env, k, v){ await ensure(env); await env.DB.prepare("INSER
 async function cacheGet(env, k, maxAgeMs){ await ensure(env); const r = await env.DB.prepare("SELECT v, t FROM cache WHERE k = ?").bind(k).first(); return r && Date.now() - r.t < maxAgeMs ? JSON.parse(r.v) : null; }
 async function cachePut(env, k, v){ await ensure(env); await env.DB.prepare("INSERT INTO cache (k, v, t) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, t = excluded.t").bind(k, JSON.stringify(v), Date.now()).run(); }
 
+async function copiaAuto(env, key, st){
+  await ensure(env);
+  const nome = `${lisbonDay()} automática`;
+  const ja = await env.DB.prepare("SELECT 1 AS x FROM copias WHERE k = ? AND data = ?").bind(key, nome).first();
+  if (ja) return;
+  await env.DB.prepare("INSERT INTO copias (k, data, v) VALUES (?, ?, ?)").bind(key, nome, JSON.stringify(st)).run();
+  await env.DB.prepare("DELETE FROM copias WHERE k = ? AND data LIKE '% automática' AND data NOT IN (SELECT data FROM copias WHERE k = ? AND data LIKE '% automática' ORDER BY data DESC LIMIT 30)").bind(key, key).run();
+}
 function merge(a, b){
   a = a || {v:1, cfg:{upd:0}}; if (!b) return a;
   const out = Object.assign({}, a);
@@ -906,8 +915,29 @@ export default {
       if (p === "/api/sync"){
         const stored = await getVal(env, key);
         const merged = merge(stored, body.data);
-        if (JSON.stringify(merged) !== JSON.stringify(stored)) await putVal(env, key, merged);
+        if (JSON.stringify(merged) !== JSON.stringify(stored)){
+          /* cópia automática: o estado antes da primeira alteração de cada dia (guarda as últimas 30) */
+          if (stored && (stored.ops || []).length) await copiaAuto(env, key, stored).catch(() => {});
+          await putVal(env, key, merged);
+        }
         return json({data:merged});
+      }
+      if (p === "/api/copias"){
+        await ensure(env);
+        const r = await env.DB.prepare("SELECT data, length(v) AS tam, v FROM copias WHERE k = ? ORDER BY data DESC LIMIT 60").bind(key).all();
+        return json({copias:(r.results || []).map(x => { let n = 0; try{ n = (JSON.parse(x.v).ops || []).filter(o => o && !o.del).length; }catch(e){} return {data:x.data, tam:x.tam, movimentos:n}; })});
+      }
+      if (p === "/api/copia"){
+        await ensure(env);
+        const r = await env.DB.prepare("SELECT v FROM copias WHERE k = ? AND data = ?").bind(key, String(body.data || "")).first();
+        if (!r) return json({error:"Cópia não encontrada."}, 404);
+        return json({data:String(body.data), estado:JSON.parse(r.v)});
+      }
+      if (p === "/api/copiar"){
+        const st = await getVal(env, key); if (!st) return json({error:"Ainda não há dados guardados."}, 400);
+        const nome = `${lisbonDay()} ${new Intl.DateTimeFormat("pt-PT", {timeZone:"Europe/Lisbon", hour:"2-digit", minute:"2-digit"}).format(new Date())} ${String(body.motivo || "manual").replace(/[^\p{L}\p{N} .,-]/gu, "").slice(0, 40)}`;
+        await env.DB.prepare("INSERT OR REPLACE INTO copias (k, data, v) VALUES (?, ?, ?)").bind(key, nome, JSON.stringify(st)).run();
+        return json({ok:true, data:nome});
       }
       /* o resto só funciona para códigos que já sincronizaram (evita uso por estranhos) */
       if (!(await getVal(env, key))) return json({error:"Sincroniza primeiro este código pessoal."}, 403);

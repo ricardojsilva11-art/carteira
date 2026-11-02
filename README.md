@@ -3,7 +3,8 @@
 App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincronizada entre PC e iPhone.
 
 - Valor de cada posição atualizado automaticamente com o preço de mercado (Yahoo Finance) e convertido para euros.
-- Ganho/perda total, do dia e realizado em vendas; evolução da carteira face ao valor investido.
+- Indicadores separados: capital líquido investido, não realizado, realizado (método FIFO), dividendos líquidos e resultado total; rentabilidade das escolhas (TWR) e TIR anual.
+- Movimentos de compra, venda, dividendo, comissão e imposto, com validação (sem vendas sem unidades nem datas futuras).
 - Exposição por setor (incluindo o interior dos ETFs), por classe de ativo, por ativo e por moeda, com alertas de concentração.
 - Análise técnica (médias de 50/200 dias, RSI, MACD, suportes e resistências, volatilidade).
 - Análise fundamental e sugestões de investimento com IA (Claude com pesquisa na web, com fontes).
@@ -17,6 +18,8 @@ App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincr
 - Crescimento previsto: simulação a 5/10/20 anos com o histórico mensal de cada ativo (em euros, com dividendos), teste com os últimos 10 anos e comentário da IA.
 - Independência financeira (FIRE): número FIRE pela regra dos 4% (ou 3,5%/3%), ano provável/pessimista/otimista em euros de hoje e efeito de investir mais 100 €/mês.
 - Avisos de dados em falta (extratos por importar, compras repetidas, vendas sem compra, dividendos por registar).
+- Respostas da IA num formato fixo (resumo, pontos positivos, riscos, o que acompanhar, sugestão), com cada frase marcada como facto, histórico, estimativa, opinião ou recomendação.
+- Exportação JSON e CSV, importação com pré-visualização (nunca apaga), cópias de segurança automáticas diárias no servidor e recuperação seletiva; aviso de preços desatualizados.
 - Tema claro e escuro; instalável no ecrã principal do iPhone.
 
 ## Ficheiros
