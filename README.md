@@ -26,6 +26,7 @@ App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincr
 | `index.html` | A app (GitHub Pages) |
 | `worker.js` | O servidor (Cloudflare Worker `carteira-api`) |
 | `manifest.webmanifest`, `icon-*.png` | Instalação no telemóvel |
+| `testes.html` | Testes automáticos dos cálculos (abre no browser; corre a app só em memória, sem tocar nos teus dados) |
 
 ## Servidor (Cloudflare)
 

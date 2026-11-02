@@ -247,7 +247,9 @@ const fmtPreco = (v, moeda) => { if (v == null || !isFinite(v)) return "—"; co
 const dataPT = d => d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4) : "";
 function toast(t, ms = 2600){ const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), ms); }
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const store = {
+/* modo de teste (testes.html): memória própria, sem servidor e sem tocar nos dados guardados */
+const TESTE = /[?&]teste\b/.test(location.search), MEM = {};
+const store = TESTE ? { get(k, d){ return k in MEM ? JSON.parse(MEM[k]) : d; }, set(k, v){ MEM[k] = JSON.stringify(v); } } : {
   get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
@@ -330,7 +332,7 @@ function rangeNecessario(){
   return anos <= .9 ? "1y" : anos <= 1.9 ? "2y" : anos <= 4.8 ? "5y" : anos <= 9.6 ? "10y" : "max";
 }
 async function atualizarPrecos(forcar){
-  const syms = [...new Set(vivos("ops").map(o => o.sym).concat(benchSym() ? [benchSym()] : []))];
+  const syms = [...new Set(vivos("ops").map(o => o.sym).filter(Boolean).concat(benchSym() ? [benchSym()] : []))];
   if (!syms.length || loadingPrecos) return;
   const range = rangeNecessario();
   if (!forcar && P.range === range && Date.now() - P.quando < 4 * 60e3 && syms.every(s => P.precos[s])) return;
@@ -352,19 +354,35 @@ function fxAgora(moeda){ const c = moedaFx(moeda); return c === "EUR" ? 1 : ((P.
 function precoEUR(sym){ const p = P.precos[sym]; if (!p) return NaN; return p.preco * escalaMoeda(p.moeda) * fxAgora(p.moeda); }
 
 /* ---------- cálculos da carteira ---------- */
+/* ---------- CÁLCULOS ----------
+   Método FIFO (as primeiras unidades compradas são as primeiras vendidas), como no IRS.
+   Valores em euros: o custo é o total pago no dia (com comissões); a venda é o total recebido (já sem comissões).
+   Comissões e impostos avulsos (tipo «comissao»/«imposto») são custos que reduzem o resultado total. */
+const TIPOS_CAPITAL = ["compra", "venda"], TIPOS_CUSTO = ["comissao", "imposto"];
 function posicoes(){
-  const by = {};
+  const by = {}, novo = sym => by[sym] = by[sym] || {sym, qtd:0, custo:0, realizado:0, divRec:0, divImp:0, custos:0, compras:0, receitas:0, lotes:[], vendasCasadas:[], ops:[]};
   opsF().slice().sort((a, b) => (a.data || "").localeCompare(b.data || "") || (a.criado || 0) - (b.criado || 0)).forEach(o => {
-    const p = by[o.sym] = by[o.sym] || {sym:o.sym, qtd:0, custo:0, realizado:0, divRec:0, ops:[]};
-    const q = +o.qtd || 0, t = +o.total || 0;
-    if (o.tipo === "dividendo"){ p.divRec += t; p.ops.push(o); return; }
-    if (o.tipo === "venda"){
-      const medio = p.qtd > 0 ? p.custo / p.qtd : 0, qv = Math.min(q, p.qtd);
-      if (q - qv > 1e-6) (p.semCompra = p.semCompra || []).push({data:o.data, qtd:+(q - qv).toFixed(6)});
-      p.custo -= medio * qv; p.realizado += (q > 0 ? t * qv / q : 0) - medio * qv; p.qtd -= qv;
-      if (p.qtd < 1e-9){ p.qtd = 0; p.custo = 0; }
-    } else { p.qtd += q; p.custo += t; }
+    if (!o.sym) return;   /* custos sem ativo: só entram nos totais */
+    const p = novo(o.sym), q = +o.qtd || 0, t = +o.total || 0;
     p.ops.push(o);
+    if (o.tipo === "dividendo"){ p.divRec += t; p.divImp += +o.imposto || 0; return; }
+    if (TIPOS_CUSTO.includes(o.tipo)){ p.custos += t; return; }
+    if (o.tipo === "venda"){
+      let falta = Math.min(q, p.qtd), custoSaiu = 0;
+      const casada = falta;
+      while (falta > 1e-12 && p.lotes.length){
+        const l = p.lotes[0], usa = Math.min(falta, l.qtd), c = l.custo * usa / l.qtd;
+        custoSaiu += c; l.custo -= c; l.qtd -= usa; falta -= usa;
+        if (l.qtd < 1e-12) p.lotes.shift();
+      }
+      if (q - casada > 1e-6) (p.semCompra = p.semCompra || []).push({data:o.data, qtd:+(q - casada).toFixed(6)});
+      const receita = q > 0 ? t * casada / q : 0;     /* só a parte com compra registada */
+      p.realizado += receita - custoSaiu; p.receitas += receita;
+      if (receita > 0) p.vendasCasadas.push({id:o.id, data:o.data, receita, custo:custoSaiu});
+      p.qtd -= casada;
+      if (p.qtd < 1e-9){ p.qtd = 0; p.lotes = []; }
+    } else if (o.tipo === "compra"){ p.qtd += q; p.compras += t; if (q > 0) p.lotes.push({qtd:q, custo:t, data:o.data}); }
+    p.custo = p.lotes.reduce((s, l) => s + l.custo, 0);
   });
   return Object.values(by).map(p => {
     const a = ativo(p.sym) || {}, pr = P.precos[p.sym] || {};
@@ -373,19 +391,27 @@ function posicoes(){
     const varDia = pr.preco && pr.anterior ? p.qtd * (pr.preco - pr.anterior) * escalaMoeda(pr.moeda) * fxAgora(pr.moeda) : 0;
     const dps12 = dps12m(p.sym), escFx = escalaMoeda(pr.moeda) * fxAgora(pr.moeda);
     const divPrev = p.qtd * dps12 * escFx;
-    return Object.assign(p, {sessao:pr.sessao || "", divPrev:isFinite(divPrev) ? divPrev : 0, nome:a.nome || pr.nome || p.sym, tipo:a.tipo || "Ação", setores:a.setores || {"Outros":100}, moeda:pr.moeda || a.moeda || "", precoLocal:pr.preco, valor, ganho:valor - p.custo, rend:p.custo > 0 ? (valor - p.custo) / p.custo : 0, varDia, varDiaPct:pr.anterior ? pr.preco / pr.anterior - 1 : 0, temPreco:isFinite(valor)});
+    return Object.assign(p, {sessao:pr.sessao || "", divPrev:isFinite(divPrev) ? divPrev : 0, nome:a.nome || pr.nome || p.sym, tipo:a.tipo || "Ação", setores:a.setores || {"Outros":100}, moeda:pr.moeda || a.moeda || "", precoLocal:pr.preco,
+      precoMedio:p.qtd > 0 ? p.custo / p.qtd : 0, valor, ganho:valor - p.custo, rend:p.custo > 0 ? (valor - p.custo) / p.custo : 0, varDia, varDiaPct:pr.anterior ? pr.preco / pr.anterior - 1 : 0, temPreco:isFinite(valor)});
   });
 }
+/* indicadores da carteira — cada um com o seu significado (ver «Como são calculados» na app) */
 function totais(ps){
   const ab = ps.filter(p => p.qtd > 0);
   const valor = ab.reduce((s, p) => s + (p.temPreco ? p.valor : p.custo), 0);
-  const custo = ab.reduce((s, p) => s + p.custo, 0);
-  const realizado = ps.reduce((s, p) => s + p.realizado, 0);
+  const custo = ab.reduce((s, p) => s + p.custo, 0);                          /* custo (FIFO) das posições abertas */
+  const realizado = ps.reduce((s, p) => s + p.realizado, 0);                  /* vendas − custo das unidades vendidas */
   const dia = ab.reduce((s, p) => s + (p.temPreco ? p.varDia : 0), 0);
-  const divRec = ps.reduce((s, p) => s + p.divRec, 0), divPrev = ab.reduce((s, p) => s + p.divPrev, 0);
+  const divRec = ps.reduce((s, p) => s + p.divRec, 0), divImp = ps.reduce((s, p) => s + p.divImp, 0), divPrev = ab.reduce((s, p) => s + p.divPrev, 0);
+  const capitalBruto = ps.reduce((s, p) => s + p.compras, 0);                 /* tudo o que pagaste em compras */
+  const receitas = ps.reduce((s, p) => s + p.receitas, 0);                    /* o que recebeste em vendas (com compra registada) */
+  const custosAvulsos = opsF().filter(o => TIPOS_CUSTO.includes(o.tipo)).reduce((s, o) => s + (+o.total || 0), 0);
   const lim = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
   const div12 = opsF().filter(o => o.tipo === "dividendo" && o.data >= lim).reduce((s, o) => s + (+o.total || 0), 0);
-  return {divRec, divPrev, div12, valor, custo, ganho:valor - custo, rend:custo > 0 ? (valor - custo) / custo : 0, realizado, dia, diaPct:valor - dia > 0 ? dia / (valor - dia) : 0, n:ab.length};
+  const naoRealizado = valor - custo, total = naoRealizado + realizado + divRec - custosAvulsos;
+  return {divRec, divImp, divBruto:divRec + divImp, divPrev, div12, valor, custo, ganho:naoRealizado, naoRealizado, rend:custo > 0 ? naoRealizado / custo : 0,
+    realizado, custosAvulsos, total, totalPct:capitalBruto > 0 ? total / capitalBruto : 0, capitalBruto, capitalLiquido:capitalBruto - receitas,
+    dia, diaPct:valor - dia > 0 ? dia / (valor - dia) : 0, n:ab.length};
 }
 function exposicao(ps){
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0) || 1;
@@ -415,7 +441,7 @@ function dps12m(sym){
 }
 function qtdEm(sym, dia){ /* unidades detidas antes da data ex-dividendo */
   let q = 0;
-  opsF().filter(o => o.sym === sym && o.data < dia && o.tipo !== "dividendo").sort((a, b) => a.data.localeCompare(b.data)).forEach(o => { q = o.tipo === "venda" ? Math.max(0, q - (+o.qtd || 0)) : q + (+o.qtd || 0); });
+  opsF().filter(o => o.sym === sym && o.data < dia && TIPOS_CAPITAL.includes(o.tipo)).sort((a, b) => a.data.localeCompare(b.data)).forEach(o => { q = o.tipo === "venda" ? Math.max(0, q - (+o.qtd || 0)) : q + (+o.qtd || 0); });
   return q;
 }
 function fxEm(moeda, dia){
@@ -429,7 +455,7 @@ function pagamentos(){
   const est = [];
   [...new Set(opsF().map(o => o.sym))].forEach(sym => {
     const p = P.precos[sym]; if (!p || !p.divs) return;
-    const primeira = opsF().filter(o => o.sym === sym && o.tipo !== "dividendo").map(o => o.data).sort()[0];
+    const primeira = opsF().filter(o => o.sym === sym && o.tipo === "compra").map(o => o.data).sort()[0];
     /* cada dividendo registado corresponde a um só pagamento: o mais recente com data ex até 60 dias antes */
     const evs = p.divs.filter(([dia]) => primeira && dia > primeira).map(([dia, amt]) => ({dia, amt, usado:false}));
     reg.filter(r => r.sym === sym).sort((x, y) => x.data.localeCompare(y.data)).forEach(r => {
@@ -445,10 +471,10 @@ function pagamentos(){
   return reg.concat(est).sort((a, b) => b.data.localeCompare(a.data));
 }
 
-/* evolução diária: [dia, valor, investido, entradas, vendas, dividendos] */
+/* evolução diária: [dia, valor, investido, compras, vendas (parte com compra registada), dividendos, custos avulsos] */
 function historico(){
-  const todas = opsF().slice().sort((a, b) => (a.data || "").localeCompare(b.data || ""));
-  const ops = todas.filter(o => o.tipo !== "dividendo"), divs = todas.filter(o => o.tipo === "dividendo");
+  const todas = opsF().slice().sort((a, b) => (a.data || "").localeCompare(b.data || "") || (a.criado || 0) - (b.criado || 0));
+  const ops = todas.filter(o => TIPOS_CAPITAL.includes(o.tipo) && o.sym), divs = todas.filter(o => o.tipo === "dividendo"), custos = todas.filter(o => TIPOS_CUSTO.includes(o.tipo));
   if (!ops.length) return [];
   const ini = ops[0].data, syms = [...new Set(ops.map(o => o.sym))];
   const dias = new Set();
@@ -456,17 +482,18 @@ function historico(){
   ops.forEach(o => dias.add(o.data));
   const lista = [...dias].filter(d => d <= hoje()).sort(); if (!lista.length) return [];
   const idx = {}, last = {}, fxIdx = {}, fxLast = {}, q = {}, custo = {};
-  let oi = 0, di = 0;
+  let oi = 0, di = 0, ci = 0;
   const out = [];
   for (const d of lista){
-    let entrou = 0, vendas = 0, dv = 0;
+    let entrou = 0, vendas = 0, dv = 0, cs = 0;
     while (oi < ops.length && ops[oi].data <= d){
       const o = ops[oi++], s = o.sym, qq = +o.qtd || 0, t = +o.total || 0;
       q[s] = q[s] || 0; custo[s] = custo[s] || 0;
-      if (o.tipo === "venda"){ const m = q[s] > 0 ? custo[s] / q[s] : 0, qv = Math.min(qq, q[s]); custo[s] -= m * qv; q[s] -= qv; vendas += t; }
+      if (o.tipo === "venda"){ const m = q[s] > 0 ? custo[s] / q[s] : 0, qv = Math.min(qq, q[s]); custo[s] -= m * qv; q[s] -= qv; vendas += qq > 0 ? t * qv / qq : 0; }
       else { q[s] += qq; custo[s] += t; entrou += t; }
     }
     while (di < divs.length && divs[di].data <= d){ dv += +divs[di++].total || 0; }
+    while (ci < custos.length && custos[ci].data <= d){ cs += +custos[ci++].total || 0; }
     let v = 0, inv = 0;
     for (const s of syms){
       const p = P.precos[s]; if (!p) continue;
@@ -484,15 +511,21 @@ function historico(){
       v += (q[s] || 0) * px * escalaMoeda(p.moeda) * fx;
       inv += custo[s] || 0;
     }
-    out.push([d, v, inv, entrou, vendas, dv]);
+    out.push([d, v, inv, entrou, vendas, dv, cs]);
   }
   return out;
 }
 /* rentabilidade ponderada no tempo (não depende de quando entra o dinheiro) */
 function twr(h){
-  let f = 1;
-  for (let i = 1; i < h.length; i++){ const base = h[i - 1][1] + h[i][3]; if (base > .01) f *= (h[i][1] + h[i][4] + h[i][5]) / base; }
-  return h.length > 1 ? f - 1 : NaN;
+  /* fluxos no fim do dia: fator = (valor + vendas + dividendos − custos − compras) ÷ valor do dia anterior;
+     no dia em que a carteira começa (valor anterior 0): valor ÷ compras */
+  let f = 1, n = 0;
+  for (let i = 1; i < h.length; i++){
+    const ant = h[i - 1][1], x = h[i], liq = x[1] + x[4] + x[5] - (x[6] || 0) - x[3];
+    if (ant > .01){ f *= liq / ant; n++; }
+    else if (x[3] > .01){ f *= (x[1] + x[4] + x[5] - (x[6] || 0)) / x[3]; n++; }
+  }
+  return n ? f - 1 : NaN;
 }
 /* «se tivesses posto o mesmo dinheiro, nas mesmas datas, no índice» */
 const BENCH = [["IWDA.AS", "MSCI World"], ["SXR8.DE", "S&P 500"], ["VWCE.DE", "FTSE All-World"], ["", "Nenhum"]];
@@ -507,15 +540,21 @@ function simularBench(h){
     /* antes do primeiro preço conhecido usa esse primeiro preço (aproximação) */
     const base = ult != null ? ult : hh[0][1];
     const px = base * escalaMoeda(p.moeda) * fxEm(p.moeda, x[0]);
-    if (px){ u += x[3] / px; u -= Math.min(u, x[4] / px); }
+    if (px){ u += x[3] / px; u -= Math.min(u, x[4] / px); }   /* mesmas compras e vendas, ao preço do índice nesse dia */
     out.push([x[0], u * px, ult != null ? px : null]);
   }
   return out;
 }
 /* TIR anual (rentabilidade anualizada do teu dinheiro) */
 function tir(){
-  const fl = opsF().map(o => [o.data, o.tipo === "compra" ? -(+o.total || 0) : +o.total || 0]);
-  const v = totais(posicoes()).valor; if (!fl.length || !(v > 0)) return NaN;
+  const ps = posicoes(), fl = [];
+  opsF().forEach(o => {
+    if (o.tipo === "compra") fl.push([o.data, -(+o.total || 0)]);
+    else if (o.tipo === "dividendo") fl.push([o.data, +o.total || 0]);
+    else if (TIPOS_CUSTO.includes(o.tipo)) fl.push([o.data, -(+o.total || 0)]);
+  });
+  ps.forEach(p => p.vendasCasadas.forEach(v => fl.push([v.data, v.receita])));
+  const v = totais(ps).valor; if (!fl.length || !(v > 0)) return NaN;
   fl.push([hoje(), v]);
   const t0 = new Date(fl.reduce((a, x) => x[0] < a ? x[0] : a, fl[0][0])).getTime();
   const f = r => fl.reduce((s, [d, c]) => s + c / Math.pow(1 + r, (new Date(d).getTime() - t0) / (365.25 * 864e5)), 0);
@@ -653,8 +692,8 @@ function vPainel(m){
     <div style="display:flex;flex-direction:column;gap:6px">
       <span class="muted" style="font-size:14px">Valor da carteira</span>
       <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span class="big mono">${eur(t.valor)}</span>
-      <span class="mono ${tone(t.ganho)}" style="font-size:17px">${eurS(t.ganho)} (${pctS(t.rend)})</span></div>
-      ${t.divRec || t.realizado ? `<span class="muted" style="font-size:13px">Com dividendos e vendas: <span class="mono ${tone(t.ganho + t.divRec + t.realizado)}">${eurS(t.ganho + t.divRec + t.realizado)}</span></span>` : ""}
+      <span class="mono ${tone(t.total)}" style="font-size:17px" title="Resultado total">${eurS(t.total)} (${pctS(t.totalPct)})</span></div>
+      <span class="muted" style="font-size:13px;line-height:1.6">Não realizado <span class="mono ${tone(t.naoRealizado)}">${eurS(t.naoRealizado)}</span> · Realizado <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span> · Dividendos líquidos <span class="mono ${tone(t.divRec)}">${eurS(t.divRec)}</span>${t.custosAvulsos ? ` · Custos <span class="mono down">${eurS(-t.custosAvulsos)}</span>` : ""}</span>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="atualizarPrecos(true)" aria-label="Atualizar preços"><svg class="i"><use href="#i-sync"/></svg><span>Atualizar</span></button>
@@ -663,7 +702,7 @@ function vPainel(m){
   </div>
   <div class="grid4">
     <div class="card kpi"><span class="lab">Resultado hoje</span><span class="v mono ${tone(t.dia)}">${eurS(t.dia)} <span style="font-size:14px">${pctS(t.diaPct)}</span></span></div>
-    <div class="card kpi"><span class="lab">Total investido</span><span class="v mono">${eur(t.custo)}</span></div>
+    <div class="card kpi"><span class="lab">Capital investido</span><span class="v mono">${eur(t.capitalBruto)}</span><span class="sub">líquido (compras − vendas): ${eur(t.capitalLiquido)}</span></div>
     <a class="card kpi" href="#dividendos" style="text-decoration:none;color:inherit"><span class="lab">Dividendos · 12 meses</span><span class="v mono">${eur(t.div12)}</span><span class="sub">previsão: ${eur(t.divPrev, 0)}/ano</span></a>
     <a class="card kpi" href="#exposicao" style="text-decoration:none;color:inherit"><span class="lab">Próximo investimento · ${eur(A, 0)}</span>${sug.length ? `<span style="font-size:15px;font-weight:600;line-height:1.5">${sug.slice(0, 2).map(([s, v]) => `${esc(s)} <span class="mono muted2">${eur(v, 0)}</span>`).join("<br>")}${sug.length > 2 ? ` <span class="sub">+${sug.length - 2}</span>` : ""}</span>` : `<span class="sub" style="line-height:1.4">Define os alvos em Exposição e plano</span>`}</a>
   </div>
@@ -673,6 +712,16 @@ function vPainel(m){
     <div class="chartbox" style="height:260px"><canvas id="cEvol" role="img" aria-label="Gráfico da evolução do valor da carteira e do valor investido"></canvas></div>
     <div style="display:flex;gap:18px;font-size:13px;color:var(--txt2);margin-top:10px;flex-wrap:wrap"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--up)"></span>Valor da carteira</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed var(--txt3)"></span>Valor investido</span>${benchSym() ? `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dotted #6EA8FE"></span>Mesmo dinheiro no ${esc(benchNome())}</span>` : ""}<span id="evolVar" class="mono"></span></div>
     <div id="evolKpi" class="kpis4"></div>
+    <details class="mais" style="margin-top:12px"><summary>Como são calculados estes valores</summary>
+      <ul class="muted2" style="font-size:13px;line-height:1.6;margin:10px 0 0;padding-left:18px">
+        <li><strong>Valor da carteira</strong>: quantidade × preço atual, convertido para euros ao câmbio de agora.</li>
+        <li><strong>Capital investido</strong>: soma de tudo o que pagaste em compras (com comissões). <strong>Líquido</strong>: menos o que recebeste em vendas.</li>
+        <li><strong>Não realizado</strong>: valor atual − custo das posições abertas. <strong>Realizado</strong>: vendas − custo das unidades vendidas. O custo segue o método FIFO (as primeiras unidades compradas são as primeiras vendidas), o mesmo do IRS.</li>
+        <li><strong>Resultado total</strong>: não realizado + realizado + dividendos líquidos − comissões e impostos avulsos. A percentagem é sobre o capital investido.</li>
+        <li><strong>Rentabilidade das escolhas (TWR)</strong>: quanto rendeu cada euro no período, sem o efeito de quando entrou ou saiu dinheiro. É a métrica certa para comparar com o índice.</li>
+        <li><strong>TIR anual</strong>: rentabilidade anual do teu dinheiro, com as datas e os valores reais de cada entrada e saída.</li>
+        <li>Vendas sem a compra registada não entram nestes cálculos (aparecem em «A rever»).</li>
+      </ul></details>
   </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h2 style="margin:0">Posições</h2><a href="#posicoes" style="font-size:14px">Ver todas</a></div>
@@ -694,14 +743,14 @@ function desenharEvol(){
   if (dias && todo.length){ const lim = new Date(Date.now() - dias * 864e5).toISOString().slice(0, 10); ini = Math.max(0, todo.findIndex(x => x[0] >= lim)); if (ini > 0) ini--; }
   const hp = todo.slice(ini), bp = bt ? bt.slice(ini) : null;
   const ev = document.getElementById("evolVar"), kp = document.getElementById("evolKpi");
-  if (hp.length > 1 && ev){ const a = hp[0], z = hp[hp.length - 1], fl = hp.slice(1).reduce((s, x) => s + x[3] - x[4] - x[5], 0); const g = (z[1] - a[1]) - fl; ev.innerHTML = `No período: <span class="${tone(g)}">${eurS(g)}</span>`; }
+  if (hp.length > 1 && ev){ const a = hp[0], z = hp[hp.length - 1], fl = hp.slice(1).reduce((s, x) => s + x[3] - x[4] - x[5] + (x[6] || 0), 0); const g = (z[1] - a[1]) - fl; ev.innerHTML = `No período: <span class="${tone(g)}">${eurS(g)}</span>`; }
   if (kp && hp.length > 1){
     const r = twr(hp), bz = bp && bp.filter(x => x[2]), rb = bz && bz.length > 1 ? bz[bz.length - 1][2] / bz[0][2] - 1 : NaN, t = tir();
     const fim = bt && bt[bt.length - 1] && bt[bt.length - 1][1], val = todo[todo.length - 1][1];
     kp.innerHTML = `
-      <div><span class="lab">A tua rentabilidade</span><span class="mono v ${tone(r)}">${pctS(r)}</span><span class="sub">no período, sem o efeito das entradas</span></div>
+      <div><span class="lab">Rentabilidade das escolhas (TWR)</span><span class="mono v ${tone(r)}">${pctS(r)}</span><span class="sub">no período, sem o efeito das entradas e saídas</span></div>
       ${benchSym() ? `<div><span class="lab">${esc(benchNome())}</span><span class="mono v ${tone(rb)}">${pctS(rb)}</span><span class="sub">${isFinite(r) && isFinite(rb) ? (r >= rb ? "estás à frente por " : "estás atrás por ") + NF1.format(Math.abs(r - rb) * 100) + " p.p." : ""}</span></div>` : ""}
-      <div><span class="lab">TIR anual</span><span class="mono v ${tone(t)}">${isFinite(t) ? pctS(t) : "—"}</span><span class="sub">desde o início, por ano</span></div>
+      <div><span class="lab">TIR anual (o teu dinheiro)</span><span class="mono v ${tone(t)}">${isFinite(t) ? pctS(t) : "—"}</span><span class="sub">desde o início, com as datas reais</span></div>
       ${fim ? `<div><span class="lab">Mesmo dinheiro no ${esc(benchNome())}</span><span class="mono v">${eur(fim, 0)}</span><span class="sub ${tone(val - fim)}">a tua carteira: ${eurS(val - fim, 0)}</span></div>` : ""}`;
   }
   if (!hp.length){ const c = document.getElementById("cEvol"); if (c) c.parentElement.innerHTML = `<div class="empty" style="padding:60px 10px">${L.code ? "A carregar o histórico de preços…" : "Liga o servidor nas Definições para veres o histórico."}</div>`; return; }
@@ -760,7 +809,7 @@ function vPosicoes(m){
   <p class="muted" style="font-size:13px;margin:12px 0 0">Ganho já realizado em vendas: <span class="mono ${tone(t.realizado)}">${eurS(t.realizado)}</span>. Toca numa posição para ver o detalhe, editar setores ou analisar.</p></div>
   ${fechadas.length ? `<div class="card" style="margin-bottom:14px"><h2>Posições fechadas</h2><div class="tbl"><table><thead><tr><th>Ativo</th><th class="r">Resultado realizado</th></tr></thead><tbody>${fechadas.map(p => `<tr class="click" onclick="verAtivo('${esc(p.sym)}')"><td><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></td><td class="r mono ${tone(p.realizado)}">${eurS(p.realizado)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
   <div class="card"><h2>Movimentos</h2><div class="tbl"><table><thead><tr><th>Data</th><th>Ativo</th><th>Operação</th><th class="r">Quantidade</th><th class="r">Total (€)</th><th class="r">Preço médio</th><th></th></tr></thead><tbody>
-  ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym)}</td><td><span class="pill ${o.tipo === "venda" ? "down" : o.tipo === "dividendo" ? "" : "up"}">${o.tipo === "venda" ? "Venda" : o.tipo === "dividendo" ? "Dividendo" : "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${o.tipo === "dividendo" ? "—" : esc(String(o.qtd).replace(".", ","))}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${o.tipo !== "dividendo" && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
+  ${ops.map(o => `<tr><td class="mono">${dataPT(o.data)}</td><td class="tk">${esc(o.sym || "Conta")}</td><td><span class="pill ${o.tipo === "venda" || TIPOS_CUSTO.includes(o.tipo) ? "down" : o.tipo === "dividendo" ? "" : "up"}">${({venda:"Venda", dividendo:"Dividendo", comissao:"Comissão", imposto:"Imposto"})[o.tipo] || "Compra"}</span>${o.origem ? ` <span class="sub">${esc(o.origem)}</span>` : ""}</td><td class="r mono">${TIPOS_CAPITAL.includes(o.tipo) ? esc(String(o.qtd).replace(".", ",")) : "—"}</td><td class="r mono">${eur(o.total)}</td><td class="r mono muted2">${TIPOS_CAPITAL.includes(o.tipo) && o.qtd ? eur(o.total / o.qtd) : "—"}</td><td class="r"><button class="btn sm" onclick="abrirOp('${o.id}')">Editar</button></td></tr>`).join("")}
   </tbody></table></div></div>`;
 }
 /* compras repetidas (à mão + importada) e vendas sem compra registada */
@@ -810,8 +859,8 @@ function abrirOp(id, pre, tipoIni){
   const o = id ? vivos("ops").find(x => x.id === id) : null;
   escolhido = o ? Object.assign({sym:o.sym}, ativo(o.sym) || {}, {nome:(ativo(o.sym) || {}).nome || o.sym}) : (pre ? {sym:pre.sym, nome:pre.nome, tipoY:pre.tipoY || "", tipo:pre.tipo || ""} : null);
   dlg(`<h3>${o ? "Editar movimento" : "Adicionar investimento"}</h3>
-  <div class="seg" role="group" aria-label="Operação" style="align-self:flex-start"><button type="button" id="opC" onclick="setOpTipo('compra')">Compra</button><button type="button" id="opV" onclick="setOpTipo('venda')">Venda</button><button type="button" id="opD" onclick="setOpTipo('dividendo')">Dividendo</button></div>
-  <label class="f">Ativo (ação, ETF, REIT ou cripto)<input class="in" id="oBusca" autocomplete="off" placeholder="Ex.: Apple, VWCE, Realty Income, Bitcoin" value="${escolhido ? esc(escolhido.sym + " · " + (escolhido.nome || "")) : ""}" oninput="buscar(this.value)" ${o ? "disabled" : ""}></label>
+  <div class="seg" role="group" aria-label="Operação" style="align-self:flex-start"><button type="button" id="opC" onclick="setOpTipo('compra')">Compra</button><button type="button" id="opV" onclick="setOpTipo('venda')">Venda</button><button type="button" id="opD" onclick="setOpTipo('dividendo')">Dividendo</button><button type="button" id="opK" onclick="setOpTipo('comissao')">Comissão</button><button type="button" id="opI" onclick="setOpTipo('imposto')">Imposto</button></div>
+  <label class="f" id="oBuscaLab">Ativo (ação, ETF, REIT ou cripto)<input class="in" id="oBusca" autocomplete="off" placeholder="Ex.: Apple, VWCE, Realty Income, Bitcoin" value="${escolhido ? esc(escolhido.sym + " · " + (escolhido.nome || "")) : ""}" oninput="buscar(this.value)" ${o ? "disabled" : ""}></label>
   <div id="oRes" class="results hide" role="listbox" aria-label="Resultados"></div>
   <div class="fgrid">
     <label class="f">Data<input class="in" id="oData" type="date" value="${o ? o.data : hoje()}" max="${hoje()}"></label>
@@ -830,9 +879,10 @@ function abrirOp(id, pre, tipoIni){
 let dlgTipo = "compra";
 function setOpTipo(t){
   dlgTipo = t; const c = $("#opC"); if (!c) return;
-  c.classList.toggle("on", t === "compra"); $("#opV").classList.toggle("on", t === "venda"); $("#opD").classList.toggle("on", t === "dividendo");
-  $("#oTotLab").textContent = t === "venda" ? "Total recebido em euros (já sem comissões)" : t === "dividendo" ? "Valor líquido recebido em euros" : "Total pago em euros (com comissões)";
-  ["#oQtdL", "#oMedioL"].forEach(id => $(id).classList.toggle("hide", t === "dividendo")); $("#oImpL").classList.toggle("hide", t !== "dividendo");
+  c.classList.toggle("on", t === "compra"); $("#opV").classList.toggle("on", t === "venda"); $("#opD").classList.toggle("on", t === "dividendo"); $("#opK").classList.toggle("on", t === "comissao"); $("#opI").classList.toggle("on", t === "imposto");
+  $("#oTotLab").textContent = t === "venda" ? "Total recebido em euros (já sem comissões)" : t === "dividendo" ? "Valor líquido recebido em euros" : TIPOS_CUSTO.includes(t) ? "Valor pago em euros" : "Total pago em euros (com comissões)";
+  ["#oQtdL", "#oMedioL"].forEach(id => $(id).classList.toggle("hide", t === "dividendo" || TIPOS_CUSTO.includes(t))); $("#oImpL").classList.toggle("hide", t !== "dividendo");
+  const ab = $("#oBuscaLab"); if (ab) ab.firstChild.textContent = TIPOS_CUSTO.includes(t) ? "Ativo (opcional: deixa vazio se for uma comissão ou imposto da conta)" : "Ativo (ação, ETF, REIT ou cripto)";
 }
 function calcMedio(){ const q = num(($("#oQtd") || {}).value), t = num(($("#oTot") || {}).value), el = $("#oMedio"); if (el) el.value = q > 0 && t > 0 ? eur(t / q, t / q < 1 ? 6 : 2) : ""; }
 function buscar(q){
@@ -857,25 +907,36 @@ function escolher(i){
 async function guardarOp(id){
   const sel = escolhido;
   const qtd = num($("#oQtd").value), total = num($("#oTot").value), data = $("#oData").value;
-  if (!escolhido) return toast("Escolhe o ativo na lista de resultados.");
-  if (dlgTipo !== "dividendo" && !(qtd > 0)) return toast("Indica a quantidade.");
+  const semAtivo = TIPOS_CUSTO.includes(dlgTipo) && !$("#oBusca").value.trim();
+  if (!escolhido && !semAtivo) return toast("Escolhe o ativo na lista de resultados.");
+  if (semAtivo) escolhido = {sym:"", nome:""};
+  if (TIPOS_CAPITAL.includes(dlgTipo) && !(qtd > 0)) return toast("Indica a quantidade.");
+  if (data > hoje()) return toast("A data não pode ser no futuro.");
   if (!(total > 0)) return toast("Indica o valor em euros.");
   if (!data) return toast("Indica a data.");
-  if (dlgTipo === "venda"){ const p = posicoes().find(x => x.sym === escolhido.sym), tem = p ? p.qtd + (id ? (+(vivos("ops").find(o => o.id === id) || {}).qtd || 0) : 0) : 0; if (qtd > tem + 1e-9) return toast("Não tens unidades suficientes para esta venda."); }
   const imp = num(($("#oImp") || {}).value);
-  const o = Object.assign({}, id ? vivos("ops").find(x => x.id === id) : {id:uid(), criado:Date.now()}, {sym:escolhido.sym, tipo:dlgTipo, data, qtd:dlgTipo === "dividendo" ? 0 : qtd, total, imposto:dlgTipo === "dividendo" && imp > 0 ? imp : 0, nota:$("#oNota").value.trim(), origem:$("#oCor").value || undefined});
+  const o = Object.assign({}, id ? vivos("ops").find(x => x.id === id) : {id:uid(), criado:Date.now()}, {sym:escolhido.sym, tipo:dlgTipo, data, qtd:TIPOS_CAPITAL.includes(dlgTipo) ? qtd : 0, total, imposto:dlgTipo === "dividendo" && imp > 0 ? imp : 0, nota:$("#oNota").value.trim(), origem:$("#oCor").value || undefined});
   if (o.origem) store.set("cart.ultCor", o.origem); else delete o.origem;
+  if (deixaVendaSemUnidades(o)) return toast(dlgTipo === "venda" ? "Não tens unidades suficientes para esta venda nessa data." : "Esta alteração deixaria uma venda posterior sem unidades suficientes.", 5000);
   upsert("ops", o);
+  if (!o.sym){ fecharDlg(); render(); toast(dlgTipo === "comissao" ? "Comissão registada." : "Imposto registado."); return; }
   const existe = ativo(sel.sym), novo = !existe || existe.fonte === "pendente";
   if (!existe) upsert("ativos", {id:escolhido.sym, nome:escolhido.nome, tipoY:escolhido.tipoY || "", tipo:escolhido.tipoY === "ETF" ? "ETF" : escolhido.tipoY === "CRYPTOCURRENCY" ? "Cripto" : "Ação", setores:escolhido.tipoY === "CRYPTOCURRENCY" ? {"Cripto":100} : {"Outros":100}, fonte:"pendente"});
   else if (!existe.nome && sel.nome) upsert("ativos", Object.assign({}, existe, {nome:sel.nome}));
-  fecharDlg(); render(); toast(id ? "Movimento atualizado." : dlgTipo === "dividendo" ? "Dividendo registado." : dlgTipo === "venda" ? "Venda registada." : "Investimento adicionado.");
+  fecharDlg(); render(); toast(id ? "Movimento atualizado." : ({dividendo:"Dividendo registado.", venda:"Venda registada.", comissao:"Comissão registada.", imposto:"Imposto registado."})[dlgTipo] || "Investimento adicionado.");
   if (novo && L.code){
     api("/api/classificar", {sym:sel.sym, nome:sel.nome, tipoY:sel.tipoY || (existe || {}).tipoY, setorY:sel.setorY, industriaY:sel.industriaY})
       .then(c => { const a = ativo(o.sym) || {}; upsert("ativos", Object.assign({}, a, {id:o.sym, tipo:c.tipo, setores:c.setores, nota:c.nota || "", fonte:c.fonte})); renderBg(); })
       .catch(e => toast("Setores: " + e.message, 4500));
   }
   atualizarPrecos(true);
+}
+/* nenhuma venda pode ficar sem unidades (nem esta, nem as seguintes, se alterares uma compra) */
+function deixaVendaSemUnidades(o){
+  if (!o.sym || !TIPOS_CAPITAL.includes(o.tipo)) return false;
+  const semC = () => { const f0 = FILTRO; FILTRO = ""; const p = posicoes().find(x => x.sym === o.sym); FILTRO = f0; return p && p.semCompra ? p.semCompra.reduce((s, x) => s + x.qtd, 0) : 0; };
+  const antes = semC(), guarda = S.ops; S.ops = (S.ops || []).filter(x => x.id !== o.id).concat([o]); const depois = semC(); S.ops = guarda;
+  return depois > antes + 1e-9;
 }
 function apagarOp(id){ if (!confirm("Apagar este movimento?")) return; const o = vivos("ops").find(x => x.id === id); upsert("ops", Object.assign({}, o, {del:true})); fecharDlg(); render(); toast("Movimento apagado."); }
 function dlg(html, largo){ $("#dlgBody").innerHTML = html; const d = $("#dlg"); d.classList.toggle("wide", !!largo); if (!d.open) d.showModal(); }
@@ -1379,7 +1440,7 @@ async function atualizarDia(){
     const ant = store.get("cart.diaSig", "");
     const itens = [];
     if (sig !== ant) itens.push(Object.assign(r, {upd:Date.now()}));
-    S.ops.filter(o => o.data >= lim && o.tipo !== "dividendo").forEach(o => itens.push(o.del ? {id:"op-" + o.id, del:true, upd:o.upd || Date.now()} : {id:"op-" + o.id, upd:o.upd || o.criado || 1, data:o.data, sym:o.sym, valor:o.tipo === "venda" ? -(+o.total || 0) : +o.total || 0}));
+    S.ops.filter(o => o.data >= lim && TIPOS_CAPITAL.includes(o.tipo)).forEach(o => itens.push(o.del ? {id:"op-" + o.id, del:true, upd:o.upd || Date.now()} : {id:"op-" + o.id, upd:o.upd || o.criado || 1, data:o.data, sym:o.sym, valor:o.tipo === "venda" ? -(+o.total || 0) : +o.total || 0}));
     const res = await fetch(c.url.replace(/\/+$/, "") + "/api/sync", {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({code:c.code, data:{v:1, cfg:{upd:0}, carteira:itens}})});
     const j = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(j.error || "Erro " + res.status);
@@ -1861,6 +1922,11 @@ else if (!vivos("ops").length && !location.hash) location.hash = "#definicoes";
 setInterval(() => { if (document.visibilityState === "visible"){ atualizarPrecos(); sync(); } }, 5 * 60e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && L.code){ sync(); atualizarPrecos(); } });
 window.addEventListener("resize", () => { clearTimeout(window._rz); window._rz = setTimeout(() => Object.values(charts).forEach(c => c.resize()), 150); });
+/* modo de teste (index.html?teste=1): só memória, sem servidor; usado por testes.html */
+if (TESTE) window._teste = {
+  estado(s, p, filtro){ S = Object.assign({v:1, cfg:{upd:0}, ops:[], ativos:[], analises:[], sugestoes:null}, s); P = Object.assign({precos:{}, fx:{EUR:{preco:1, hist:[]}}, quando:Date.now(), range:""}, p); FILTRO = filtro || ""; PROJ_MEMO = {k:"", v:null}; },
+  posicoes, totais, historico, twr, tir, deixaVendaSemUnidades, hoje
+};
 </script>
 </body>
 </html>

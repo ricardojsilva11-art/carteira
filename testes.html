@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carteira — testes</title>
+<style>
+  :root{ --bg:#fff; --fg:#1a1a1a; --mut:#666; --ok:#127a3a; --mau:#b42318; --lin:#e5e5e5; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#141414; --fg:#eee; --mut:#999; --ok:#4ade80; --mau:#f87171; --lin:#2a2a2a; } }
+  body{ background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; margin:0; padding:24px 16px; }
+  main{ max-width:860px; margin:auto; }
+  h1{ font-size:22px; margin:0 0 4px; } p{ color:var(--mut); margin:0 0 18px; }
+  #resumo{ font-size:18px; font-weight:600; margin-bottom:14px; }
+  table{ width:100%; border-collapse:collapse; } td{ padding:7px 6px; border-top:1px solid var(--lin); vertical-align:top; }
+  td:first-child{ width:28px; } .ok{ color:var(--ok); } .mau{ color:var(--mau); }
+  small{ color:var(--mut); display:block; font-family:ui-monospace, monospace; font-size:12px; }
+  iframe{ position:absolute; width:1px; height:1px; left:-9999px; border:0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Testes dos cálculos</h1>
+  <p>Corre a app em modo de teste (só em memória: não lê nem altera os teus dados nem o servidor).</p>
+  <div id="resumo">A correr…</div>
+  <table id="lista"></table>
+</main>
+<iframe id="app" src="index.html?teste=1"></iframe>
+<script>
+"use strict";
+const RES = [];
+const perto = (a, b, tol = 0.005) => Math.abs(a - b) <= tol;
+function caso(nome, fn){
+  try{ const det = []; const ok = fn((cond, txt) => { det.push((cond ? "✓ " : "✗ ") + txt); return cond; }); RES.push({nome, ok:ok !== false && det.every(d => d[0] === "✓"), det}); }
+  catch(e){ RES.push({nome, ok:false, det:["erro: " + e.message]}); }
+}
+const dia = (base, n) => { const d = new Date(base + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+let seq = 0;
+const op = (tipo, sym, data, qtd, total, extra) => Object.assign({id:"t" + (++seq), criado:seq, tipo, sym, data, qtd, total}, extra || {});
+const preco = (p, moeda, hist, anterior) => ({preco:p, anterior:anterior || p, moeda, hist:hist || []});
+
+function correr(T){
+  const H = T.hoje();
+  const P0 = (precos, fxUSD) => ({precos, fx:{EUR:{preco:1, hist:[]}, USD:{preco:fxUSD || .9, hist:[]}}});
+  const pos = sym => T.posicoes().find(p => p.sym === sym);
+
+  caso("1. Compra de ação em dólares (com câmbio)", chk => {
+    T.estado({ops:[op("compra", "AAPL", "2025-01-10", 10, 900)]}, P0({AAPL:preco(110, "USD")}, .9));
+    const p = pos("AAPL"), t = T.totais(T.posicoes());
+    chk(perto(p.valor, 990), `valor 10 × 110 USD × 0,9 = 990 € (deu ${p.valor.toFixed(2)})`);
+    chk(perto(p.precoMedio, 90), `preço médio 90 € (deu ${p.precoMedio.toFixed(2)})`);
+    chk(perto(t.naoRealizado, 90), `não realizado +90 € (deu ${t.naoRealizado.toFixed(2)})`);
+  });
+
+  caso("2. Compra de ETF em euros", chk => {
+    T.estado({ops:[op("compra", "VWCE.DE", "2025-01-10", 5, 500)]}, P0({"VWCE.DE":preco(110, "EUR")}));
+    const t = T.totais(T.posicoes());
+    chk(perto(t.valor, 550), `valor 550 € (deu ${t.valor.toFixed(2)})`);
+    chk(perto(t.rend, .10, 1e-6), `rentabilidade 10% (deu ${(t.rend * 100).toFixed(2)}%)`);
+    chk(perto(t.capitalBruto, 500), `capital investido 500 € (deu ${t.capitalBruto.toFixed(2)})`);
+  });
+
+  caso("3. Compras sucessivas (preço médio)", chk => {
+    T.estado({ops:[op("compra", "X", "2025-01-10", 10, 1000), op("compra", "X", "2025-02-10", 10, 2000)]}, P0({X:preco(150, "EUR")}));
+    const p = pos("X");
+    chk(perto(p.qtd, 20), `quantidade 20 (deu ${p.qtd})`);
+    chk(perto(p.precoMedio, 150), `preço médio 150 € (deu ${p.precoMedio.toFixed(2)})`);
+    chk(perto(p.custo, 3000), `custo 3000 € (deu ${p.custo.toFixed(2)})`);
+  });
+
+  caso("4. Venda parcial (FIFO)", chk => {
+    T.estado({ops:[op("compra", "X", "2025-01-10", 10, 100), op("compra", "X", "2025-02-10", 10, 200), op("venda", "X", "2025-03-10", 15, 300)]}, P0({X:preco(20, "EUR")}));
+    const p = pos("X"), t = T.totais(T.posicoes());
+    chk(perto(p.realizado, 100), `realizado 300 − (100 + 5 × 20) = +100 € (deu ${p.realizado.toFixed(2)})`);
+    chk(perto(p.qtd, 5) && perto(p.custo, 100), `ficam 5 unidades com custo 100 € (deu ${p.qtd} / ${p.custo.toFixed(2)})`);
+    chk(perto(t.capitalLiquido, 0), `capital líquido 300 − 300 = 0 € (deu ${t.capitalLiquido.toFixed(2)})`);
+  });
+
+  caso("5. Venda total", chk => {
+    T.estado({ops:[op("compra", "X", "2025-01-10", 10, 100), op("compra", "X", "2025-02-10", 10, 200), op("venda", "X", "2025-03-10", 15, 300), op("venda", "X", "2025-04-10", 5, 60)]}, P0({X:preco(20, "EUR")}));
+    const p = pos("X"), t = T.totais(T.posicoes());
+    chk(p.qtd === 0 && p.custo === 0, `posição fechada (qtd ${p.qtd}, custo ${p.custo})`);
+    chk(perto(p.realizado, 60), `realizado +100 − 40 = +60 € (deu ${p.realizado.toFixed(2)})`);
+    chk(t.n === 0 && perto(t.valor, 0), `não conta como posição aberta`);
+    chk(perto(t.total, 60), `resultado total +60 € (deu ${t.total.toFixed(2)})`);
+  });
+
+  caso("6. Dividendos (bruto, imposto retido, líquido)", chk => {
+    T.estado({ops:[op("compra", "X", "2025-01-10", 10, 1000), op("dividendo", "X", "2025-03-10", 0, 8.5, {imposto:1.5})]}, P0({X:preco(100, "EUR")}));
+    const t = T.totais(T.posicoes());
+    chk(perto(t.divRec, 8.5), `líquido 8,50 € (deu ${t.divRec})`);
+    chk(perto(t.divImp, 1.5) && perto(t.divBruto, 10), `imposto 1,50 € e bruto 10 € (deu ${t.divImp} / ${t.divBruto})`);
+    chk(perto(t.total, 8.5), `resultado total +8,50 € (deu ${t.total.toFixed(2)})`);
+    chk(perto(t.capitalBruto, 1000), `dividendos não contam como capital investido`);
+  });
+
+  caso("7. Comissões", chk => {
+    T.estado({ops:[op("compra", "X", "2025-01-10", 10, 1010), op("comissao", "", "2025-01-31", 0, 2)]}, P0({X:preco(100, "EUR")}));
+    const t = T.totais(T.posicoes());
+    chk(perto(t.naoRealizado, -10), `comissão incluída na compra: não realizado −10 € (deu ${t.naoRealizado.toFixed(2)})`);
+    chk(perto(t.custosAvulsos, 2), `comissão avulsa 2 € (deu ${t.custosAvulsos})`);
+    chk(perto(t.total, -12), `resultado total −12 € (deu ${t.total.toFixed(2)})`);
+    chk(T.posicoes().every(p => p.sym), `a comissão sem ativo não cria uma posição`);
+  });
+
+  caso("8. Conversão cambial", chk => {
+    T.estado({ops:[op("compra", "MU", "2025-01-10", 10, 900)]}, P0({MU:preco(100, "USD")}, .8));
+    const t = T.totais(T.posicoes());
+    chk(perto(t.valor, 800), `mesmo preço em dólares, câmbio de 0,9 para 0,8: valor 800 € (deu ${t.valor.toFixed(2)})`);
+    chk(perto(t.naoRealizado, -100), `perda cambial −100 € (deu ${t.naoRealizado.toFixed(2)})`);
+  });
+
+  caso("9. Reforço de capital (rentabilidade TWR)", chk => {
+    const d = ["2025-01-06", "2025-01-07", "2025-01-08"];
+    T.estado({ops:[op("compra", "X", d[0], 10, 1000), op("compra", "X", d[1], 10, 1100)]}, P0({X:preco(110, "EUR", [[d[0], 100], [d[1], 110], [d[2], 110]])}));
+    const h = T.historico(), r = T.twr(h), t = T.totais(T.posicoes());
+    chk(perto(r, .10, 1e-6), `TWR +10% (o reforço não altera a rentabilidade) (deu ${(r * 100).toFixed(3)}%)`);
+    chk(perto(t.totalPct, 100 / 2100, 1e-6), `resultado sobre o capital 100 ÷ 2100 = 4,76% (deu ${(t.totalPct * 100).toFixed(2)}%)`);
+  });
+
+  caso("10. Várias corretoras", chk => {
+    const ops = [op("compra", "X", "2025-01-10", 10, 1000, {origem:"XTB"}), op("compra", "Y", "2025-01-10", 4, 400, {origem:"Revolut"}), op("compra", "X", "2025-02-10", 2, 220, {origem:"Revolut"})];
+    const pr = P0({X:preco(120, "EUR"), Y:preco(90, "EUR")});
+    T.estado({ops}, pr); const todos = T.totais(T.posicoes());
+    T.estado({ops}, pr, "XTB"); const xtb = T.totais(T.posicoes());
+    T.estado({ops}, pr, "Revolut"); const rev = T.totais(T.posicoes());
+    chk(perto(xtb.valor + rev.valor, todos.valor), `valor XTB + Revolut = total (${(xtb.valor + rev.valor).toFixed(2)} = ${todos.valor.toFixed(2)})`);
+    chk(perto(xtb.capitalBruto + rev.capitalBruto, todos.capitalBruto), `capital XTB + Revolut = total`);
+    chk(perto(xtb.valor, 1200) && perto(rev.valor, 600), `XTB 1200 €, Revolut 600 € (deu ${xtb.valor} / ${rev.valor})`);
+  });
+
+  caso("11. Venda sem compra registada (regressão)", chk => {
+    const d = ["2025-01-06", "2025-01-07", "2025-01-08"];
+    T.estado({ops:[op("compra", "X", d[0], 10, 1000), op("venda", "CS.PA", d[1], 5, 200)]}, P0({X:preco(100, "EUR", [[d[0], 100], [d[1], 100], [d[2], 100]]), "CS.PA":preco(40, "EUR", [[d[0], 40], [d[1], 40], [d[2], 40]])}));
+    const cs = pos("CS.PA"), t = T.totais(T.posicoes()), r = T.twr(T.historico());
+    chk(cs.qtd === 0, `quantidade nunca fica negativa (deu ${cs.qtd})`);
+    chk(cs.semCompra && cs.semCompra[0].qtd === 5, `fica assinalada em «A rever»`);
+    chk(perto(t.realizado, 0) && perto(t.capitalLiquido, 1000), `não entra no realizado nem no capital (realizado ${t.realizado}, capital líquido ${t.capitalLiquido})`);
+    chk(perto(r, 0, 1e-9), `não inflaciona a TWR (deu ${(r * 100).toFixed(3)}%)`);
+  });
+
+  caso("12. TIR anual", chk => {
+    const ini = dia(H, -365);
+    T.estado({ops:[op("compra", "X", ini, 10, 1000)]}, P0({X:preco(110, "EUR")}));
+    const r = T.tir();
+    chk(perto(r, .10, .001), `1000 € → 1100 € num ano: TIR 10% (deu ${(r * 100).toFixed(3)}%)`);
+    T.estado({ops:[op("compra", "X", ini, 10, 1000), op("venda", "CS.PA", dia(H, -100), 5, 500)]}, P0({X:preco(110, "EUR"), "CS.PA":preco(40, "EUR")}));
+    const r2 = T.tir();
+    chk(perto(r2, .10, .001), `uma venda sem compra não altera a TIR (deu ${(r2 * 100).toFixed(3)}%)`);
+  });
+
+  caso("13. Validação dos movimentos", chk => {
+    const base = [op("compra", "X", "2025-01-10", 10, 1000)];
+    T.estado({ops:base}, P0({X:preco(100, "EUR")}));
+    chk(T.deixaVendaSemUnidades({id:"n1", tipo:"venda", sym:"X", data:"2025-02-01", qtd:15, total:1500}), `recusa vender 15 quando só há 10`);
+    chk(!T.deixaVendaSemUnidades({id:"n2", tipo:"venda", sym:"X", data:"2025-02-01", qtd:10, total:1500}), `aceita vender as 10`);
+    chk(T.deixaVendaSemUnidades({id:"n3", tipo:"venda", sym:"X", data:"2025-01-05", qtd:1, total:100}), `recusa uma venda antes da compra`);
+    const comVenda = base.concat([op("venda", "X", "2025-02-01", 10, 1200)]);
+    T.estado({ops:comVenda}, P0({X:preco(100, "EUR")}));
+    chk(T.deixaVendaSemUnidades(Object.assign({}, base[0], {qtd:5})), `recusa reduzir uma compra se deixar a venda seguinte sem unidades`);
+    chk(!T.deixaVendaSemUnidades({id:"n4", tipo:"comissao", sym:"", data:"2025-02-01", qtd:0, total:2}), `comissões não são afetadas`);
+  });
+
+  const ok = RES.filter(r => r.ok).length;
+  document.getElementById("resumo").innerHTML = `<span class="${ok === RES.length ? "ok" : "mau"}">${ok} de ${RES.length} testes passaram</span>`;
+  document.getElementById("lista").innerHTML = RES.map(r => `<tr><td class="${r.ok ? "ok" : "mau"}">${r.ok ? "✓" : "✗"}</td><td>${r.nome}<small>${r.det.join("<br>")}</small></td></tr>`).join("");
+  document.title = (ok === RES.length ? "OK " : "FALHOU ") + ok + "/" + RES.length;
+  window.RESULTADO = {ok, total:RES.length, res:RES};
+}
+
+const fr = document.getElementById("app");
+let tent = 0;
+(function esperar(){
+  const T = fr.contentWindow && fr.contentWindow._teste;
+  if (T) return correr(T);
+  if (++tent > 200){ document.getElementById("resumo").innerHTML = '<span class="mau">A app não abriu em modo de teste.</span>'; window.RESULTADO = {ok:0, total:1, erro:"sem app"}; return; }
+  setTimeout(esperar, 50);
+})();
+</script>
+</body>
+</html>
