@@ -21,6 +21,7 @@ App pessoal para acompanhar investimentos (ações, ETFs, REITs e cripto), sincr
 - Respostas da IA num formato fixo (resumo, pontos positivos, riscos, o que acompanhar, sugestão), com cada frase marcada como facto, histórico, estimativa, opinião ou recomendação.
 - Exportação JSON e CSV, importação com pré-visualização (nunca apaga), cópias de segurança automáticas diárias no servidor e recuperação seletiva; aviso de preços desatualizados.
 - Tema claro e escuro; instalável no ecrã principal do iPhone.
+- Versão 2 (Premium Finance): menu lateral recolhível com Painel, Carteira, Ativos, Movimentações, Dividendos, Análises, Exposição e plano, Análise de ativos, Sugestões IA, Simuladores e Configurações; botão para ocultar valores; cópia local de proteção (`cart.backup.v2`) feita na primeira abertura, com reposição em Configurações. Os cálculos e o formato dos dados não mudaram.
 
 ## Ficheiros
 
