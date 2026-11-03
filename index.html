@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Carteira</title>
-<meta name="theme-color" content="#0B1120" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#080A09" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F4F6FA" media="(prefers-color-scheme: light)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -23,22 +23,22 @@
    As classes antigas mantêm-se: todas as páginas herdam o aspeto novo.
    ============================================================ */
 :root{
-  --bg:#0B1120; --bg2:#111827; --side:#0F1729; --card:#172033; --card2:#1D2940; --card3:#22304A; --line:#263247; --line2:#33425C;
-  --txt:#F8FAFC; --txt2:#CBD5E1; --txt3:#94A3B8; --acc:#3B82F6; --acc-btn:#2563EB; --acc-ink:#FFFFFF; --acc-soft:rgba(59,130,246,.14);
-  --gold:#D6B56D; --gold-soft:rgba(214,181,109,.14);
-  --up:#10B981; --down:#F87171; --warn-bg:#2A2416; --warn:#E9C98A; --up-bg:rgba(16,185,129,.13); --down-bg:rgba(248,113,113,.13);
-  --shadow:0 1px 2px rgba(0,0,0,.25), 0 8px 24px rgba(2,6,23,.28); --shadow-lg:0 24px 60px rgba(2,6,23,.55);
-  --hero:linear-gradient(135deg,#1B2843 0%,#162036 55%,#131C2E 100%);
-  --r-lg:18px; --r-md:14px; --r-sm:10px;
+  --bg:#080A09; --bg2:#0D100E; --side:#0B0E0C; --card:#111513; --card2:#171C19; --card3:#1D231F; --line:#1E2521; --line2:#2A332D;
+  --txt:#F1F7F3; --txt2:#BFD3C6; --txt3:#86A190; --acc:#22C55E; --acc-btn:#22C55E; --acc-ink:#03140A; --acc-soft:rgba(34,197,94,.12);
+  --gold:#E3B341; --gold-soft:rgba(227,179,65,.13);
+  --up:#22C55E; --down:#F87171; --warn-bg:#211C0F; --warn:#E9C98A; --up-bg:rgba(34,197,94,.13); --down-bg:rgba(248,113,113,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.4); --shadow-lg:0 24px 60px rgba(0,0,0,.6);
+  --hero:linear-gradient(135deg,#131915 0%,#0F1311 100%);
+  --r-lg:16px; --r-md:12px; --r-sm:10px;
   color-scheme:dark;
 }
 :root[data-theme="light"]{
-  --bg:#F4F6FA; --bg2:#EEF2F7; --side:#FFFFFF; --card:#FFFFFF; --card2:#F2F5F9; --card3:#E9EEF5; --line:#E3E8EF; --line2:#CBD5E1;
-  --txt:#0F172A; --txt2:#334155; --txt3:#5B6779; --acc:#2563EB; --acc-btn:#2563EB; --acc-ink:#FFFFFF; --acc-soft:rgba(37,99,235,.09);
-  --gold:#9A7A2E; --gold-soft:rgba(154,122,46,.1);
-  --up:#047857; --down:#DC2626; --warn-bg:#FFF6E5; --warn:#8A4B00; --up-bg:#E6F6EF; --down-bg:#FDECEC;
-  --shadow:0 1px 2px rgba(15,23,42,.05), 0 6px 18px rgba(15,23,42,.05); --shadow-lg:0 24px 60px rgba(15,23,42,.18);
-  --hero:linear-gradient(135deg,#FFFFFF 0%,#F6F8FC 100%);
+  --bg:#F3F6F4; --bg2:#ECF1EE; --side:#FFFFFF; --card:#FFFFFF; --card2:#F1F5F2; --card3:#E6EDE8; --line:#E1E8E3; --line2:#C9D5CD;
+  --txt:#0B1A11; --txt2:#2F4A39; --txt3:#557060; --acc:#15803D; --acc-btn:#16A34A; --acc-ink:#FFFFFF; --acc-soft:rgba(22,163,74,.1);
+  --gold:#9A6B00; --gold-soft:rgba(154,107,0,.1);
+  --up:#15803D; --down:#DC2626; --warn-bg:#FFF6E5; --warn:#8A4B00; --up-bg:#E3F5E9; --down-bg:#FDECEC;
+  --shadow:0 1px 2px rgba(10,30,20,.05), 0 6px 18px rgba(10,30,20,.05); --shadow-lg:0 24px 60px rgba(10,30,20,.18);
+  --hero:linear-gradient(135deg,#FFFFFF 0%,#F5F9F6 100%);
   color-scheme:light;
 }
 *{box-sizing:border-box}
@@ -49,7 +49,7 @@ a{color:var(--acc)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .mono{font-family:'Inter',system-ui,sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1,"cv11" 1;letter-spacing:-.01em}
 .up{color:var(--up)} .down{color:var(--down)} .muted{color:var(--txt3)} .muted2{color:var(--txt2)} .gold{color:var(--gold)}
-.app{display:flex;min-height:100vh}
+.app{display:block;min-height:100vh}
 
 /* ---------- menu lateral ---------- */
 .side{width:256px;flex:none;background:var(--side);border-right:1px solid var(--line);padding:22px 14px 16px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto;transition:width .22s ease,padding .22s ease}
@@ -67,11 +67,73 @@ a{color:var(--acc)}
 .nav a.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--acc)}
 .nav a.on svg.i{color:var(--acc)}
 .side .foot{margin-top:auto;padding:12px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--txt3);font-size:12px;line-height:1.55}
-main{flex:1;min-width:0;padding:28px 40px 64px;max-width:1360px;margin:0 auto;width:100%}
+main{min-width:0;padding:26px 32px 64px;max-width:1480px;margin:0 auto;width:100%}
 main.pg-in{animation:pgin .26s ease both}
 @keyframes pgin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){main.pg-in{animation:none}*{transition:none!important}}
 
+/* barra de cima */
+.top{position:sticky;top:0;z-index:45;background:color-mix(in srgb,var(--side) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1480px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;gap:18px}
+.top .brand{padding:0;flex:none}
+.top .brand i{width:32px;height:32px;border-radius:10px;color:var(--acc);background:var(--acc-soft);border:1px solid rgba(34,197,94,.25)}
+.top .brand b{font-size:14px;letter-spacing:.16em}
+.tnav{display:flex;align-items:center;gap:2px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.tnav::-webkit-scrollbar{display:none}
+.tnav a,.tnav summary{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:999px;color:var(--txt2);text-decoration:none;font-size:13.5px;font-weight:550;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;list-style:none}
+.tnav summary::-webkit-details-marker{display:none}
+.tnav a:hover,.tnav summary:hover{color:var(--txt);background:var(--card2)}
+.tnav a.on,.tnav details.on>summary{background:var(--acc-soft);color:var(--acc);font-weight:650}
+.tnav svg.i{width:15px;height:15px}
+.navmore{position:static}
+.navmore .dd{position:absolute;top:58px;min-width:230px;background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:6px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:2px;z-index:50}
+.navmore .dd a{border-radius:10px;justify-content:flex-start;height:40px}
+.tact{display:flex;align-items:center;gap:8px;flex:none}
+.tsearch{position:relative;width:220px}
+.tsearch input.in{height:38px;min-height:38px;border-radius:999px;padding-left:36px;font-size:13.5px;background:var(--card)}
+.tsearch>svg.i{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--txt3);pointer-events:none}
+.tsearch .results{position:absolute;right:0;top:46px;width:320px;background:var(--card);box-shadow:var(--shadow-lg);z-index:50}
+.tbtn{width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--txt2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;flex:none}
+.tbtn:hover{color:var(--txt);border-color:var(--line2)}
+.tbtn.on{color:var(--acc);border-color:var(--acc)}
+.tbtn svg.i{width:17px;height:17px}
+.tstat{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--txt3);line-height:1.3;white-space:nowrap}
+.tstat .status{font-size:11.5px}
+@media (max-width:1560px){.top .brand small{display:none}}
+@media (max-width:1380px){.tstat{display:none}.tsearch{width:170px}}
+@media (max-width:1180px){.tnav svg.i{display:none}}
+@media (max-width:1080px){.tsearch{display:none}}
+@media (max-width:900px){.top{display:none}}
+/* cartões de indicadores (estilo novo) */
+.kx{display:flex;flex-direction:column;gap:10px;padding:18px 18px 16px}
+.kx-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.kx-top .lab{font-size:13px;color:var(--txt2)}
+.kx-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none}
+.kx-ico svg.i{width:18px;height:18px}
+.kx-ico.g{background:rgba(34,197,94,.14);color:#22C55E}.kx-ico.b{background:rgba(59,130,246,.15);color:#60A5FA}.kx-ico.p{background:rgba(168,85,247,.15);color:#C084FC}.kx-ico.y{background:rgba(234,179,8,.15);color:#FACC15}
+.kx-v{font-size:28px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.kx-c{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:20px}
+.chgx{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:650}
+.chgx svg.i{width:14px;height:14px}
+@media (max-width:600px){.kx-v{font-size:21px}.kx{padding:14px}.kx-ico{width:30px;height:30px}}
+select.in.sel-sm{min-height:34px;height:34px;width:auto;padding:0 30px 0 12px;font-size:13px;border-radius:10px;background:var(--card2)}
+/* faixa com os ativos */
+.watch{display:flex;gap:12px;overflow-x:auto;scrollbar-width:thin;padding-bottom:4px;scroll-snap-type:x proximity}
+.wcard{flex:0 0 250px;display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);color:inherit;font:inherit;cursor:pointer;text-align:left;scroll-snap-align:start;transition:border-color .15s}
+.wcard:hover{border-color:var(--line2)}
+.wcard .wi{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.wcard .wi .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcard .wp{font-size:12.5px;display:flex;gap:6px;margin-top:3px;white-space:nowrap}
+.wcard .wsp{width:74px;height:36px;flex:none}
+/* listas compactas */
+.lst{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.lst li{display:flex;align-items:center;gap:11px;padding:10px 4px;border-top:1px solid var(--line);font-size:13.5px}
+.lst li:first-child{border-top:0}
+.lst li.click{cursor:pointer;border-radius:8px}.lst li.click:hover{background:var(--card2)}
+.lst .li-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.lst .li-m .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evd{width:40px;height:40px;border-radius:10px;background:var(--acc-soft);color:var(--acc);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;line-height:1}
+.evd b{font-size:15px}.evd span{font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
 /* barra inferior e folha «Mais» (telemóvel) */
 .tabbar{display:none}
 .sheet{position:fixed;inset:0;z-index:60;display:none}
@@ -98,7 +160,7 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 
 /* ---------- blocos ---------- */
 .head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:22px}
-.head h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.025em}
+.head h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.025em;color:var(--acc)}
 .head .eyebrow{display:block;font-size:12.5px;color:var(--txt3);margin-bottom:4px;font-weight:500}
 .big{font-size:46px;font-weight:700;letter-spacing:-.035em;line-height:1.05}
 @media (max-width:600px){.big{font-size:34px}.head h1{font-size:22px}}
@@ -112,7 +174,7 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 @media (max-width:600px){.kpi .v{font-size:18px}.card{padding:16px}.grid3{grid-template-columns:1fr}.grid4{gap:10px}}
 .g-main>*,.g-half>*{min-width:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow);min-width:0}
-.card h2{margin:0 0 14px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card h2{margin:0 0 14px;font-size:15px;font-weight:650;letter-spacing:-.01em;color:var(--acc)}
 .card .lab{font-size:12.5px;color:var(--txt3);font-weight:500}
 a.card{transition:border-color .15s,transform .15s}
 a.card:hover{border-color:var(--line2)}
@@ -142,7 +204,7 @@ a.card:hover{border-color:var(--line2)}
 .btn{min-height:42px;padding:0 16px;border-radius:11px;border:1px solid var(--line2);background:var(--card);cursor:pointer;font-weight:550;font-size:14px;display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap;color:var(--txt);text-decoration:none;transition:background .15s,border-color .15s,transform .08s,filter .15s}
 .btn:hover{background:var(--card2);border-color:var(--line2)}
 .btn:active{transform:scale(.97)}
-.btn.pri{background:var(--acc-btn);color:var(--acc-ink);border-color:transparent;font-weight:600;box-shadow:0 6px 18px rgba(37,99,235,.28)}
+.btn.pri{background:var(--acc-btn);color:var(--acc-ink);border-color:transparent;font-weight:650;box-shadow:0 6px 18px rgba(34,197,94,.22)}
 .btn.pri:hover{filter:brightness(1.08);background:var(--acc-btn)}
 .btn.ghost{background:transparent;border-color:transparent;color:var(--txt2)} .btn.ghost:hover{background:var(--card2);color:var(--txt)}
 .btn.danger{color:var(--down);border-color:color-mix(in srgb,var(--down) 40%,transparent)}
@@ -184,7 +246,7 @@ th.ord button{all:unset;cursor:pointer;font:inherit;color:inherit;letter-spacing
 th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--txt)}
 .bar{display:flex;height:10px;border-radius:6px;overflow:hidden;gap:2px;background:var(--card2)}
 .prog{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}
-.prog>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),#60A5FA)}
+.prog>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#15803D,var(--acc))}
 .prog.gold>i{background:linear-gradient(90deg,#B8964F,var(--gold))}
 .prog.up>i{background:linear-gradient(90deg,#059669,var(--up))}
 .empty{text-align:center;padding:44px 20px;color:var(--txt2)}
@@ -320,6 +382,7 @@ dialog::backdrop{background:rgba(2,6,23,.6);backdrop-filter:blur(3px)}
   .hero .valor{gap:10px}
 }
 .srch{display:block}
+@media (min-width:901px){.btn.olho{display:none}}
 .sec-t{font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin:26px 0 12px}
 </style>
 </head>
@@ -364,12 +427,16 @@ dialog::backdrop{background:rgba(2,6,23,.6);backdrop-filter:blur(3px)}
 </svg>
 
 <div class="app">
-  <nav class="side" aria-label="Menu principal">
-    <div class="brand"><i><svg class="i" style="stroke-width:1.8"><use href="#i-diamond"/></svg></i><span class="lbl"><b>CARTEIRA</b><small>Personal Wealth Management</small></span></div>
-    <div class="nav" id="nav"></div>
-    <div class="foot" id="sideFoot">A carregar…</div>
-    <button type="button" class="recolher" id="btnMenu" onclick="alternarMenu()"><svg class="i"><use href="#i-side"/></svg><span class="lbl">Recolher menu</span></button>
-  </nav>
+  <header class="top"><div class="top-in">
+    <a class="brand" href="#painel" style="text-decoration:none;color:inherit"><i><svg class="i" style="stroke-width:1.8"><use href="#i-diamond"/></svg></i><span class="lbl"><b>CARTEIRA</b><small>Personal Wealth Management</small></span></a>
+    <nav class="tnav" id="nav" aria-label="Menu principal"></nav>
+    <div class="tact">
+      <div class="tsearch" role="search"><svg class="i"><use href="#i-search"/></svg><input class="in" id="topQ" type="search" placeholder="Procurar ativo" autocomplete="off" aria-label="Procurar ativo na carteira" oninput="buscaTopo(this.value)" onblur="setTimeout(() => $('#topRes').classList.add('hide'), 150)" onkeydown="if(event.key==='Escape'){this.value='';buscaTopo('')}"><div id="topRes" class="results hide"></div></div>
+      <div class="tstat" id="sideFoot"></div>
+      <button type="button" class="tbtn" id="topPriv" onclick="alternarPriv()" aria-label="Ocultar valores" title="Ocultar valores"><svg class="i"><use href="#i-eye"/></svg></button>
+      <a class="tbtn" id="topDef" href="#definicoes" aria-label="Configurações" title="Configurações"><svg class="i"><use href="#i-def"/></svg></a>
+    </div>
+  </div></header>
   <main id="main" tabindex="-1"></main>
   <nav class="tabbar" id="tabbar" aria-label="Navegação"></nav>
 </div>
@@ -814,13 +881,18 @@ let VIEW = "painel", ARG = "";
 function rota(){ const h = (location.hash || "#painel").slice(1).split("/"); if (ALIAS[h[0]]) h[0] = ALIAS[h[0]]; VIEW = VIEWS.some(v => v[0] === h[0]) ? h[0] : "painel"; fecharMais && fecharMais(); ARG = decodeURIComponent(h.slice(1).join("/") || ""); render(); window.scrollTo(0, 0); }
 window.addEventListener("hashchange", rota);
 function navs(){
-  const vis = VIEWS.filter(v => !ocultos().includes(v[0]) || VIEW === v[0]), GR = {p:"Património", a:"Análise", c:"Conta"};
-  let g = "";
-  $("#nav").innerHTML = vis.map(v => { const t = v[3] !== g ? `<div class="grp">${GR[v[3]]}</div>` : ""; g = v[3]; return t + `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""} title="${v[1]}"><svg class="i"><use href="#${v[2]}"/></svg><span class="lbl">${v[1]}</span></a>`; }).join("");
+  const vis = VIEWS.filter(v => !ocultos().includes(v[0]) || VIEW === v[0]), PRINC = ["painel","posicoes","ativos","movimentos","dividendos","analises"];
+  const lnk = v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[1]}</a>`;
+  const prim = vis.filter(v => PRINC.includes(v[0])), resto = vis.filter(v => !PRINC.includes(v[0]) && v[0] !== "definicoes"), def = vis.find(v => v[0] === "definicoes");
+  $("#nav").innerHTML = prim.map(lnk).join("") + (resto.length ? `<details class="navmore ${resto.some(v => v[0] === VIEW) ? "on" : ""}"><summary aria-haspopup="true"><svg class="i"><use href="#i-more"/></svg>${esc((resto.find(v => v[0] === VIEW) || [, "Mais"])[1])}<svg class="i" style="width:13px;height:13px"><use href="#i-chev"/></svg></summary><div class="dd">${resto.map(lnk).join("")}</div></details>` : "") ;
+  const dg = $("#topDef"); if (dg) dg.classList.toggle("on", VIEW === "definicoes");
+  const mo = $("#nav .navmore"); if (mo){ const dd = mo.querySelector(".dd"); mo.addEventListener("toggle", () => { if (mo.open){ const r = mo.getBoundingClientRect(); dd.style.left = Math.min(r.left, innerWidth - 250) + "px"; } }); }
+  const pv = $("#topPriv"); if (pv){ pv.classList.toggle("on", !!PRIV); pv.innerHTML = `<svg class="i"><use href="#${PRIV ? "i-eyeoff" : "i-eye"}"/></svg>`; pv.setAttribute("aria-label", PRIV ? "Mostrar valores" : "Ocultar valores"); pv.title = pv.getAttribute("aria-label"); pv.setAttribute("aria-pressed", String(!!PRIV)); }
   const tab = ["painel","posicoes","movimentos","dividendos"].map(id => vis.find(v => v[0] === id)).filter(Boolean).slice(0, 4), naTab = tab.some(v => v[0] === VIEW);
   $("#tabbar").innerHTML = tab.map(v => `<a href="#${v[0]}" class="${VIEW === v[0] ? "on" : ""}" ${VIEW === v[0] ? 'aria-current="page"' : ""}><svg class="i"><use href="#${v[2]}"/></svg>${v[0] === "movimentos" ? "Movimentos" : v[1]}</a>`).join("")
     + `<button type="button" class="${naTab ? "" : "on"}" onclick="abrirMais()" aria-haspopup="dialog"><svg class="i"><use href="#i-more"/></svg>${naTab ? "Mais" : esc((VIEWS.find(v => v[0] === VIEW) || [, "Mais"])[1].split(" ")[0])}</button>`;
 }
+document.addEventListener("click", e => { const mo = document.querySelector("#nav .navmore[open]"); if (mo && !mo.contains(e.target)) mo.open = false; });
 function footer(){
   const q = P.quando ? (Date.now() - P.quando > 864e5 ? dataPT(new Date(P.quando).toISOString().slice(0, 10)) + " " : "") + new Date(P.quando).toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"}) : "—";
   const sy = syncState.ok === true ? "Sincronizado" : syncState.ok === false ? "Erro na sincronização" : (L.code ? "A ligar…" : "Sem sincronização");
@@ -2205,7 +2277,7 @@ async function recuperarCopia(data){ try{ const st = await obterCopia(data); pre
    (posicoes, totais, historico, twr, tir, pagamentos, exposicao,
    fireCfg, alvos, sugerirCompras). Nenhum cálculo foi alterado.
    ============================================================ */
-const CORES_ATV = ["#3B82F6","#10B981","#D6B56D","#8B5CF6","#EC4899","#06B6D4","#F59E0B","#EF4444","#14B8A6","#6366F1"];
+const CORES_ATV = ["#22C55E","#3B82F6","#A855F7","#EAB308","#EC4899","#06B6D4","#F97316","#14B8A6","#6366F1","#84CC16"];
 const hashS = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 const corDe = s => CORES_ATV[hashS(s) % CORES_ATV.length];
 const logoAtv = sym => { const c = corDe(sym), t = String(sym || "?").split(/[.\-]/)[0].replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase(); return `<span class="logo" aria-hidden="true" style="background:${c}24;color:${c};border:1px solid ${c}40">${esc(t || "?")}</span>`; };
@@ -2217,7 +2289,7 @@ const qtdFmt = q => nf(q < 10 ? 4 : 2).format(q).replace(/,?0+$/, "");
 let PRIV = store.get("cart.privado", false);
 function ajustarPriv(){ document.body.classList.toggle("privado", !!PRIV); }
 function alternarPriv(){ PRIV = !PRIV; store.set("cart.privado", PRIV); ajustarPriv(); render(); toast(PRIV ? "Valores ocultos." : "Valores visíveis."); }
-const olhoBtn = () => `<button type="button" class="btn ic" onclick="alternarPriv()" aria-pressed="${PRIV}" aria-label="${PRIV ? "Mostrar valores" : "Ocultar valores"}" title="${PRIV ? "Mostrar valores" : "Ocultar valores"}"><svg class="i"><use href="#${PRIV ? "i-eyeoff" : "i-eye"}"/></svg></button>`;
+const olhoBtn = () => `<button type="button" class="btn ic olho" onclick="alternarPriv()" aria-pressed="${PRIV}" aria-label="${PRIV ? "Mostrar valores" : "Ocultar valores"}" title="${PRIV ? "Mostrar valores" : "Ocultar valores"}"><svg class="i"><use href="#${PRIV ? "i-eyeoff" : "i-eye"}"/></svg></button>`;
 
 /* ---------- cópia de segurança local (antes do redesign) ---------- */
 function backupLocal(){ try{ return JSON.parse(localStorage.getItem("cart.backup.v2") || "null"); }catch(e){ return null; } }
@@ -2272,7 +2344,7 @@ function kpiCard(o){
 /* ---------- distribuição (donut) ---------- */
 let DIST = store.get("cart.dist", "ativo");
 function setDist(d){ DIST = d; store.set("cart.dist", d); render(); }
-const COR_MOEDA = {EUR:"#3B82F6", USD:"#10B981", GBP:"#8B5CF6", CHF:"#EC4899", JPY:"#D6B56D", CAD:"#06B6D4", DKK:"#F59E0B", SEK:"#14B8A6"};
+const COR_MOEDA = {EUR:"#22C55E", USD:"#3B82F6", GBP:"#8B5CF6", CHF:"#EC4899", JPY:"#D6B56D", CAD:"#06B6D4", DKK:"#F59E0B", SEK:"#14B8A6"};
 function distItens(ps, dim){
   const ab = ps.filter(p => p.qtd > 0 && p.temPreco), tot = ab.reduce((s, p) => s + p.valor, 0) || 1, g = {};
   const add = (k, v, ga, cu, cor) => { const x = g[k] = g[k] || {k, v:0, ganho:0, custo:0, cor}; x.v += v; x.ganho += ga; x.custo += cu; };
@@ -2329,51 +2401,42 @@ function vPainel(m){
   if (!vivos("ops").length) return semDados(m);
   const nAv = listaAvisos(ps).length, al = alvos(), A = valorPlano(), sug = sugerirCompras(A, al, ps);
   const velhos = ps.filter(p => p.qtd > 0 && precoVelho(p.sym)), est = estadoCot(ps);
-  const h = historico(), h30 = fatiaDias(h, 31), v30 = h30.length > 1 ? h30[0][1] : NaN, g30 = ganhoPeriodo(h30), r30 = h30.length > 1 ? twr(h30) : NaN, e30 = entradas30();
-  const tr = tir(), abertas = ps.filter(p => p.qtd > 0);
+  const h = historico(), h30 = fatiaDias(h, 31), v30 = h30.length > 1 ? h30[0][1] : NaN, g30 = ganhoPeriodo(h30), e30 = entradas30();
+  const abertas = ps.filter(p => p.qtd > 0), comPreco = abertas.filter(p => p.temPreco).sort((a, b) => b.valor - a.valor), totV = comPreco.reduce((s, p) => s + p.valor, 0) || 1;
   const f = fireCfg(), fp = f.alvo > 0 ? t.valor / f.alvo : 0;
-  const alv = Object.entries(al).filter(([, v]) => +v > 0).sort((a, b) => b[1] - a[1]), totV = abertas.filter(p => p.temPreco).reduce((s, p) => s + p.valor, 0) || 1;
+  const alv = Object.entries(al).filter(([, v]) => +v > 0).sort((a, b) => b[1] - a[1]);
   const pg = pagamentos(), ano = hoje().slice(0, 4), divAno = pg.filter(x => x.registado && x.data.slice(0, 4) === ano).reduce((s, x) => s + x.liquido, 0);
-  const prox = eventosCal(75).filter(e => e.tipo !== "res" && e.valor).slice(0, 3);
+  const evs = eventosCal(90).slice(0, 5), ult = opsF().slice().sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.criado || 0) - (a.criado || 0)).slice(0, 5);
+  const ch = (v, txt, pctMode) => isFinite(v) ? `<span class="chgx ${tone(v)}"><svg class="i"><use href="#${v < 0 ? "i-tdown" : "i-tup"}"/></svg><span class="mono">${pctMode ? pctS(v) : eurS(v, 0)}</span></span><span class="sub">${txt}</span>` : `<span class="sub">${txt}</span>`;
+  const kpi = o => `<${o.href ? `a href="${o.href}" style="text-decoration:none;color:inherit"` : "div"} class="card kx">
+      <div class="kx-top"><span class="lab">${o.lab}${o.tip ? tipI(o.tip) : ""}</span><span class="kx-ico ${o.c}"><svg class="i"><use href="#${o.ico}"/></svg></span></div>
+      <span class="kx-v mono ${o.cls || ""}">${o.v}</span><div class="kx-c">${o.cmp}</div></${o.href ? "a" : "div"}>`;
+  const verTodos = (href, txt) => `<a class="btn sm" href="${href}">${txt}</a>`;
   m.innerHTML = `${chipsCorretora()}
   <div class="head">
-    <div><span class="eyebrow">${saudacao()}, bem-vindo de volta</span><h1>Património pessoal</h1>
-      <div class="hrow" style="margin-top:8px;gap:14px"><span class="status"><svg class="i" style="width:14px;height:14px"><use href="#i-clock"/></svg>Atualizado ${atualizadoTxt()}</span><span class="status ${est.cls}"><i></i>${est.txt}</span></div></div>
-    <div class="hrow">${olhoBtn()}
-      <button class="btn" onclick="atualizarPrecos(true)" ${loadingPrecos ? "disabled" : ""} aria-label="Atualizar cotações">${loadingPrecos ? '<span class="spin" aria-hidden="true"></span>' : '<svg class="i"><use href="#i-sync"/></svg>'}<span>Atualizar</span></button>
-      <button class="btn pri" onclick="abrirOp()"><svg class="i"><use href="#i-plus"/></svg>Adicionar movimento</button></div>
+    <div><h1>Visão geral</h1><span class="muted" style="font-size:13.5px">${saudacao()}! Isto é o que se passa hoje com os teus investimentos.</span></div>
+    <div class="hrow">
+      <span class="btn sm" style="cursor:default" title="Última atualização das cotações"><svg class="i" style="width:15px;height:15px"><use href="#i-clock"/></svg>${atualizadoTxt()}<span class="status ${est.cls}" style="margin-left:4px" title="${esc(est.txt)}"><i></i></span></span>
+      <button class="btn sm" onclick="exportarCSV()"><svg class="i" style="width:15px;height:15px"><use href="#i-up"/></svg>Exportar</button>
+      <button class="btn sm" onclick="atualizarPrecos(true)" ${loadingPrecos ? "disabled" : ""}>${loadingPrecos ? '<span class="spin" aria-hidden="true"></span>' : '<svg class="i" style="width:15px;height:15px"><use href="#i-sync"/></svg>'}Atualizar</button>
+      <button class="btn sm pri" onclick="abrirOp()"><svg class="i" style="width:15px;height:15px"><use href="#i-plus"/></svg>Adicionar movimento</button></div>
   </div>
-  ${nAv ? `<a class="warn" href="#posicoes" style="display:block;margin:-6px 0 16px;text-decoration:none">${nAv === 1 ? "1 ponto a rever nos teus dados" : `${nAv} pontos a rever nos teus dados`} →</a>` : ""}
-  ${velhos.length ? `<div class="warn" style="margin:-6px 0 16px">Preço desatualizado: ${velhos.map(p => `${esc(p.sym)} (${dataPT(precoVelho(p.sym))})`).join(", ")}. Toca em Atualizar; se continuar, a bolsa pode estar fechada ou o ativo sem negociação.</div>` : ""}
-
-  <section class="hero" aria-label="Património total">
-    <div class="top"><span class="eyebrow"><svg class="i" style="width:14px;height:14px"><use href="#i-diamond"/></svg>Património total</span>
-      <span class="sub">${t.n} posiç${t.n === 1 ? "ão" : "ões"}${FILTRO ? " · " + esc(FILTRO) : ""}</span></div>
-    <div class="valor"><span class="big mono">${eur(t.valor)}</span>
-      <span class="chg ${tone(t.dia)}"><svg class="i" style="width:14px;height:14px"><use href="#${t.dia < 0 ? "i-tdown" : "i-tup"}"/></svg><span class="mono">${eurS(t.dia)} · ${pctS(t.diaPct)}</span><span style="font-weight:500;opacity:.8">hoje</span></span></div>
-    <span class="muted" style="font-size:13.5px">Resultado acumulado <span class="mono ${tone(t.total)}" style="font-weight:650">${eurS(t.total)}</span> · rentabilidade <span class="mono ${tone(t.totalPct)}" style="font-weight:650">${pctS(t.totalPct)}</span></span>
-    <div class="spark priv">${sparkSvg(fatiaDias(h, 92).map(x => x[1]), cssv("--acc"))}</div>
-    <div class="stats">
-      <div><span class="lab">Não realizado${tipI("Valor atual menos o custo (FIFO) das posições que ainda tens.")}</span><span class="v mono ${tone(t.naoRealizado)}">${eurS(t.naoRealizado)}</span></div>
-      <div><span class="lab">Realizado em vendas${tipI("O que ganhaste ou perdeste nas unidades já vendidas, pelo método FIFO (o do IRS).")}</span><span class="v mono ${tone(t.realizado)}">${eurS(t.realizado)}</span></div>
-      <div><span class="lab">Dividendos líquidos</span><span class="v mono">${eur(t.divRec)}</span></div>
-      <div><span class="lab">TIR anual${tipI("Rentabilidade anual do teu dinheiro, com as datas e os valores reais de cada entrada e saída.")}</span><span class="v mono ${tone(tr)}">${isFinite(tr) ? pctS(tr) : "—"}</span></div>
-    </div>
-  </section>
+  ${nAv ? `<a class="warn" href="#posicoes" style="display:block;margin:-8px 0 16px;text-decoration:none">${nAv === 1 ? "1 ponto a rever nos teus dados" : `${nAv} pontos a rever nos teus dados`} →</a>` : ""}
+  ${velhos.length ? `<div class="warn" style="margin:-8px 0 16px">Preço desatualizado: ${velhos.map(p => `${esc(p.sym)} (${dataPT(precoVelho(p.sym))})`).join(", ")}. Toca em Atualizar; se continuar, a bolsa pode estar fechada ou o ativo sem negociação.</div>` : ""}
 
   <div class="grid4">
-    ${kpiCard({lab:"Património total", ico:"i-bank", icoCls:"acc", v:eur(t.valor, 0), tip:"Quantidade × preço atual de cada posição, em euros ao câmbio de agora.", cmp:isFinite(v30) && v30 > 0 ? `<span class="mono ${tone(t.valor - v30)}">${eurS(t.valor - v30, 0)}</span> vs. há 30 dias` : ""})}
-    ${kpiCard({lab:"Capital investido", ico:"i-pos", v:eur(t.capitalLiquido, 0), tip:"Tudo o que pagaste em compras (com comissões), menos o que recebeste em vendas.", cmp:e30 ? `<span class="mono">${eurS(e30, 0)}</span> entradas líquidas em 30 dias` : `compras ${eur(t.capitalBruto, 0)} − vendas ${eur(t.capitalBruto - t.capitalLiquido, 0)}`})}
-    ${kpiCard({lab:"Lucro / prejuízo", ico:t.total < 0 ? "i-tdown" : "i-tup", icoCls:tone(t.total), v:eurS(t.total, 0), cls:tone(t.total), tip:"Não realizado + realizado + dividendos líquidos − comissões e impostos avulsos.", cmp:isFinite(g30) ? `<span class="mono ${tone(g30)}">${eurS(g30, 0)}</span> de mercado no último mês` : ""})}
-    ${kpiCard({lab:"Rentabilidade total", ico:"i-pct", icoCls:tone(t.totalPct), v:pctS(t.totalPct), cls:tone(t.totalPct), tip:"Resultado total a dividir pelo capital investido em compras.", cmp:isFinite(r30) ? `<span class="mono ${tone(r30)}">${pctS(r30)}</span> TWR no último mês` : ""})}
+    ${kpi({lab:"Património total", ico:"i-pos", c:"g", v:eur(t.valor), tip:"Quantidade × preço atual de cada posição, em euros ao câmbio de agora.", cmp:ch(isFinite(v30) && v30 > 0 ? t.valor / v30 - 1 : NaN, `vs. há 30 dias · hoje <span class="mono ${tone(t.dia)}">${pctS(t.diaPct)}</span>`, true)})}
+    ${kpi({lab:"Lucro / prejuízo total", ico:t.total < 0 ? "i-tdown" : "i-tup", c:"b", v:eurS(t.total), cls:tone(t.total), tip:"Não realizado + realizado + dividendos líquidos − comissões e impostos avulsos.", cmp:ch(t.totalPct, `não realizado <span class="mono">${eurS(t.naoRealizado, 0)}</span> · realizado <span class="mono">${eurS(t.realizado, 0)}</span>`, true)})}
+    ${kpi({lab:"Dividendos · 12 meses", ico:"i-div", c:"p", v:eur(t.div12), href:"#dividendos", tip:"Dividendos líquidos registados nos últimos 12 meses.", cmp:`<span class="sub">este ano <span class="mono">${eur(divAno)}</span> · desde o início <span class="mono">${eur(t.divRec, 0)}</span></span>`})}
+    ${kpi({lab:"Capital investido", ico:"i-bank", c:"y", v:eur(t.capitalLiquido), tip:"Tudo o que pagaste em compras (com comissões), menos o que recebeste em vendas.", cmp:e30 ? ch(e30, "entradas líquidas em 30 dias") : `<span class="sub">compras <span class="mono">${eur(t.capitalBruto, 0)}</span> − vendas <span class="mono">${eur(t.capitalBruto - t.capitalLiquido, 0)}</span></span>`})}
   </div>
 
   <div class="g-main">
     <div class="card" style="margin:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><h2 style="margin:0">Evolução patrimonial</h2>
-        <div class="hrow"><div class="seg" role="group" aria-label="Mostrar">${[["valor","Valor"],["rent","Rentabilidade"]].map(([k, n]) => `<button type="button" class="${EVM === k ? "on" : ""}" onclick="setEvm('${k}')">${n}</button>`).join("")}</div>
-        <div class="seg" role="group" aria-label="Período">${["1M","3M","6M","1A","3A","ALL"].map(p => `<button type="button" class="${periodo === p ? "on" : ""}" onclick="setPeriodo('${p}')">${p}</button>`).join("")}</div></div></div>
-      <div class="chartbox" style="height:290px"><canvas id="cEvol" role="img" aria-label="Gráfico da evolução do valor da carteira e do valor investido"></canvas></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h2 style="margin:0">Desempenho da carteira</h2>
+        <div class="hrow"><div class="seg" role="group" aria-label="Mostrar">${[["valor","Valor"],["rent","Rentab."]].map(([k, n]) => `<button type="button" class="${EVM === k ? "on" : ""}" onclick="setEvm('${k}')">${n}</button>`).join("")}</div>
+        <div class="seg" role="group" aria-label="Período">${["1M","3M","6M","1A","3A","ALL"].map(p => `<button type="button" class="${periodo === p ? "on" : ""}" onclick="setPeriodo('${p}')">${p === "ALL" ? "Tudo" : p}</button>`).join("")}</div></div></div>
+      <div class="chartbox" style="height:280px"><canvas id="cEvol" role="img" aria-label="Gráfico da evolução do valor da carteira e do valor investido"></canvas></div>
       <div style="display:flex;gap:18px;font-size:12.5px;color:var(--txt2);margin-top:12px;flex-wrap:wrap">${EVM === "valor" ? `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;border-radius:2px;background:var(--acc)"></span>Valor da carteira</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dashed var(--txt3)"></span>Capital investido</span>${benchSym() ? `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;border-top:2px dotted var(--gold)"></span>Mesmo dinheiro no ${esc(benchNome())}</span>` : ""}` : `<span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;border-radius:2px;background:var(--up)"></span>Rentabilidade acumulada sobre o investido</span>`}<span id="evolVar" class="mono" style="margin-left:auto"></span></div>
       <div id="evolKpi" class="kpis4"></div>
       <details class="mais" style="margin-top:14px"><summary>Como são calculados estes valores</summary>
@@ -2388,47 +2451,78 @@ function vPainel(m){
           <li>Vendas sem a compra registada não entram nestes cálculos (aparecem em «A rever»).</li>
         </ul></details>
     </div>
-    <div class="card" style="margin:0"><h2>Distribuição da carteira</h2>${distBloco(ps, "cDist", ["ativo","classe","moeda","setor"])}</div>
+    <div class="card" style="margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px"><h2 style="margin:0">Distribuição</h2>
+        <select class="in sel-sm" aria-label="Distribuir por" onchange="setDist(this.value)">${[["ativo","Por ativo"],["classe","Por classe"],["moeda","Por moeda"],["setor","Por setor"]].map(([k, n]) => `<option value="${k}" ${DIST === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+      ${distBloco(ps, "cDist", [["ativo","classe","moeda","setor"].includes(DIST) ? DIST : "ativo"])}
+    </div>
   </div>
 
-  <div class="card" style="margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><h2 style="margin:0">Desempenho dos ativos</h2><a class="btn sm ghost" href="#posicoes">Ver carteira<svg class="i" style="width:15px;height:15px"><use href="#i-right"/></svg></a></div>
-    ${tabelaDesemp(abertas, 10)}
-    ${abertas.length > 10 ? `<p class="sub" style="margin:10px 0 0">A mostrar 10 de ${abertas.length} posições.</p>` : ""}
+  ${comPreco.length ? `<div class="card" style="margin-bottom:16px;padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px"><h2 style="margin:0;font-size:14px">Os teus ativos hoje</h2>${verTodos("#ativos", "Ver todos")}</div>
+    <div class="watch">${comPreco.map(p => { const hh = ((P.precos[p.sym] || {}).hist || []).slice(-30).map(x => x[1]), tend = hh.length > 1 ? hh[hh.length - 1] - hh[0] : 0, cor = tend < 0 ? cssv("--down") : cssv("--up");
+      return `<button type="button" class="wcard" onclick="verAtivo('${esc(p.sym)}')" aria-label="${esc(p.sym)}: ${esc(fmtPreco(p.precoLocal, p.moeda))}, hoje ${pctS(p.varDiaPct)}">
+        ${logoAtv(p.sym)}<div class="wi"><span class="tk">${esc(p.sym)}</span><span class="sub">${esc(p.nome)}</span><span class="wp"><span class="mono">${fmtPreco(p.precoLocal, p.moeda)}</span> <span class="mono ${tone(p.varDiaPct)}">${pctS(p.varDiaPct)}</span></span></div>
+        <div class="wsp">${sparkSvg(hh, cor, 120, 40)}</div></button>`; }).join("")}</div></div>` : ""}
+
+  <div class="grid3">
+    <div class="card" style="margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><h2 style="margin:0">Últimos movimentos</h2>${verTodos("#movimentos", "Ver todos")}</div>
+      <ul class="lst">${ult.map(o => `<li class="click" onclick="abrirOp('${o.id}')">${o.sym ? logoAtv(o.sym) : '<span class="logo" style="background:var(--card2);color:var(--txt3)">€</span>'}<div class="li-m"><span class="tk">${esc(o.sym || "Conta")}</span><span class="sub">${NOME_TIPO[o.tipo] || "Compra"} · ${dataPT(o.data)}</span></div><span class="mono ${o.tipo === "dividendo" || o.tipo === "venda" ? "up" : TIPOS_CUSTO.includes(o.tipo) ? "down" : ""}" style="font-weight:600">${o.tipo === "compra" || TIPOS_CUSTO.includes(o.tipo) ? "−" : "+"}${eur(o.total)}</span></li>`).join("")}</ul>
+    </div>
+    <div class="card" style="margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><h2 style="margin:0">Maiores posições</h2>${verTodos("#posicoes", "Ver todas")}</div>
+      <ul class="lst">${comPreco.slice(0, 5).map(p => `<li class="click" onclick="verAtivo('${esc(p.sym)}')">${logoAtv(p.sym)}<div class="li-m"><span class="tk">${esc(p.sym)}</span><span class="sub">${esc(p.nome)}</span></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="mono" style="font-weight:600">${eur(p.valor, 0)}</span><span class="sub mono">${pct(p.valor / totV)} · <span class="${tone(p.rend)}">${pctS(p.rend)}</span></span></div></li>`).join("")}</ul>
+    </div>
+    <div class="card" style="margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><h2 style="margin:0">Próximos eventos</h2>${verTodos("#dividendos", "Ver calendário")}</div>
+      ${evs.length ? `<ul class="lst">${evs.map(e => { const d = new Date(e.data + "T12:00:00"); return `<li><span class="evd"><b>${String(d.getDate()).padStart(2, "0")}</b><span>${["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][d.getMonth()]}</span></span><div class="li-m"><span class="tk">${esc(e.sym)}</span><span class="sub">${esc(e.txt)}</span></div>${e.valor ? `<span class="mono up" style="font-weight:600">≈ ${eur(e.valor)}</span>` : ""}</li>`; }).join("")}</ul>`
+        : `<div class="empty" style="padding:26px 10px"><div class="eico"><svg class="i"><use href="#i-clock"/></svg></div><p class="muted" style="margin:0;font-size:13px">${CAL.quando ? "Sem dividendos nem resultados nos próximos 90 dias." : L.code ? "A carregar o calendário…" : "Liga o servidor para veres o calendário."}</p></div>`}
+    </div>
   </div>
 
   <div class="g-half">
     <div class="card" style="margin:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px"><h2 style="margin:0">Dividendos</h2><a class="btn sm ghost" href="#dividendos">Detalhe<svg class="i" style="width:15px;height:15px"><use href="#i-right"/></svg></a></div>
-      <div class="metrics" style="margin-bottom:14px">
-        <div><span class="n">Recebidos em ${ano}</span><span class="v mono">${eur(divAno)}</span><span class="sub">líquido</span></div>
-        <div><span class="n">Acumulados</span><span class="v mono">${eur(t.divRec)}</span><span class="sub">desde o início</span></div>
-        <div><span class="n">Previsão 12 meses${tipI("Dividendos dos últimos 12 meses × as unidades que tens hoje, antes de impostos.")}</span><span class="v mono">${eur(t.divPrev)}</span><span class="sub">bruto</span></div>
-      </div>
-      <div class="chartbox" style="height:130px"><canvas id="cDivMini" role="img" aria-label="Dividendos recebidos por mês nos últimos 12 meses"></canvas></div>
-      <div style="margin-top:14px"><div class="lab" style="font-size:12px;margin-bottom:6px;color:var(--txt3)">Próximos</div>
-      ${prox.length ? `<ul class="legend">${prox.map(e => `<li><span>${logoAtv(e.sym)}<span><span class="tk">${esc(e.sym)}</span> <span class="sub">${e.tipo === "pag" ? "pagamento" : "data ex"} ${dataPT(e.data)}${e.est ? " (estimada)" : ""}</span></span></span><span class="mono">≈ ${eur(e.valor)}</span></li>`).join("")}</ul>` : `<p class="muted" style="font-size:13px;margin:0">${CAL.quando ? "Sem pagamentos previstos nos próximos 75 dias." : "O calendário carrega na página Dividendos."}</p>`}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px"><h2 style="margin:0">Dividendos por mês</h2>${verTodos("#dividendos", "Detalhe")}</div>
+      <div class="chartbox" style="height:150px"><canvas id="cDivMini" role="img" aria-label="Dividendos recebidos por mês nos últimos 12 meses"></canvas></div>
+      <p class="sub" style="margin:10px 0 0">Previsão para 12 meses: <span class="mono">${eur(t.divPrev)}</span> brutos${tipI("Dividendos dos últimos 12 meses × as unidades que tens hoje, antes de impostos.")}</p>
     </div>
     <div class="card" style="margin:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px"><h2 style="margin:0">Objetivos financeiros</h2><a class="btn sm ghost" href="#simuladores">Simuladores<svg class="i" style="width:15px;height:15px"><use href="#i-right"/></svg></a></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px"><h2 style="margin:0">Objetivos financeiros</h2>${verTodos("#simuladores", "Simuladores")}</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span style="font-weight:600;font-size:14px">Independência financeira (FIRE)${tipI(`Número FIRE: despesas de ${eur(f.gasto, 0)}/mês × 12 ÷ ${NF1.format(f.taxa * 100)}% (regra de levantamento). Muda os valores em Simuladores.`)}</span><span class="mono gold" style="font-weight:700">${pct(Math.min(1, fp))}</span></div>
-        <div class="prog gold"><i style="width:${Math.min(100, fp * 100).toFixed(1)}%"></i></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span style="font-weight:600;font-size:14px">Independência financeira (FIRE)${tipI(`Número FIRE: despesas de ${eur(f.gasto, 0)}/mês × 12 ÷ ${NF1.format(f.taxa * 100)}% (regra de levantamento). Muda os valores em Simuladores.`)}</span><span class="mono up" style="font-weight:700">${pct(Math.min(1, fp))}</span></div>
+        <div class="prog"><i style="width:${Math.min(100, fp * 100).toFixed(1)}%"></i></div>
         <span class="sub mono">${eur(t.valor, 0)} de ${eur(f.alvo, 0)} · faltam ${eur(Math.max(0, f.alvo - t.valor), 0)}</span>
       </div>
       <div class="lab" style="font-size:12px;margin-bottom:10px;color:var(--txt3)">Distribuição alvo${alv.length ? "" : " · por definir"}</div>
-      ${alv.length ? `<div style="display:flex;flex-direction:column;gap:12px">${alv.slice(0, 5).map(([s, av]) => { const p = abertas.find(x => x.sym === s), at = p && p.temPreco ? p.valor / totV : 0, pr = av > 0 ? at / (av / 100) : 0; return `<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:13px"><span class="tk">${esc(s)}</span><span class="mono muted2">${pct(at)} <span class="muted">de ${NF1.format(av)}%</span></span></div><div class="prog ${pr >= .98 ? "up" : ""}"><i style="width:${Math.min(100, pr * 100).toFixed(1)}%"></i></div></div>`; }).join("")}</div>
+      ${alv.length ? `<div style="display:flex;flex-direction:column;gap:12px">${alv.slice(0, 5).map(([s, av]) => { const p = abertas.find(x => x.sym === s), at = p && p.temPreco ? p.valor / totV : 0, pr = av > 0 ? at / (av / 100) : 0; return `<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:13px"><span class="tk">${esc(s)}</span><span class="mono muted2">${pct(at)} <span class="muted">de ${NF1.format(av)}%</span></span></div><div class="prog"><i style="width:${Math.min(100, pr * 100).toFixed(1)}%"></i></div></div>`; }).join("")}</div>
         ${sug.length ? `<div style="margin-top:16px;padding:12px 14px;border-radius:12px;background:var(--acc-soft);font-size:13.5px;line-height:1.55"><b>Próximo investimento · <span class="mono">${eur(A, 0)}</span></b><br>${sug.slice(0, 3).map(([s, v]) => `${esc(s)} <span class="mono muted2">${eur(v, 0)}</span>`).join(" · ")}</div>` : ""}`
       : `<p class="muted" style="font-size:13px;margin:0 0 10px;line-height:1.5">Define a percentagem alvo de cada ativo para veres aqui o progresso e a sugestão do próximo investimento.</p><a class="btn sm" href="#exposicao">Definir distribuição alvo</a>`}
     </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><h2 style="margin:0">Desempenho dos ativos</h2>${verTodos("#posicoes", "Ver carteira")}</div>
+    ${tabelaDesemp(abertas, 10)}
+    ${abertas.length > 10 ? `<p class="sub" style="margin:10px 0 0">A mostrar 10 de ${abertas.length} posições.</p>` : ""}
   </div>`;
+  if (!CAL.quando && L.code) setTimeout(() => atualizarCal(), 60);
   desenharEvol(); desenharDist("cDist");
-  /* dividendos por mês (últimos 12 meses, registados) */
   const meses = []; const d0 = new Date(); d0.setDate(1);
   for (let i = 11; i >= 0; i--){ const d = new Date(d0.getFullYear(), d0.getMonth() - i, 1); meses.push(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")); }
   const MS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"], op = baseOpts();
   op.scales.y.ticks.callback = v => eur(v, 0); op.scales.y.ticks.maxTicksLimit = 3; op.plugins.tooltip.callbacks = {label:c => ` ${eur(c.parsed.y)}`};
   mkChart("cDivMini", {type:"bar", data:{labels:meses.map(mm => MS[+mm.slice(5) - 1]), datasets:[{label:"Recebidos", data:meses.map(mm => +pg.filter(x => x.registado && x.data.slice(0, 7) === mm).reduce((s, x) => s + x.liquido, 0).toFixed(2)), backgroundColor:cssv("--up") + "CC", borderRadius:5, maxBarThickness:22}]}, options:op});
+}
+
+/* pesquisa rápida na barra de cima: posições e ativos seguidos */
+function buscaTopo(q){
+  const box = $("#topRes"); q = String(q || "").trim().toLowerCase();
+  if (!q){ box.classList.add("hide"); return; }
+  const lst = posicoes().filter(p => (p.sym + " " + p.nome).toLowerCase().includes(q)).slice(0, 6);
+  box.innerHTML = (lst.map(p => `<button type="button" onmousedown="event.preventDefault()" onclick="$('#topRes').classList.add('hide');$('#topQ').value='';verAtivo('${esc(p.sym)}')">${logoAtv(p.sym)}<span style="flex:1;min-width:0;text-align:left"><span class="tk">${esc(p.sym)}</span> <span class="sub">${esc(p.nome)}</span></span><span class="sub">${p.qtd > 0 ? "na carteira" : "fechada"}</span></button>`).join("")
+    || `<div style="padding:12px" class="muted">Não tens esse ativo.</div>`) + `<button type="button" onmousedown="event.preventDefault()" onclick="$('#topRes').classList.add('hide');location.hash='#analise'"><svg class="i"><use href="#i-search"/></svg><span style="flex:1;text-align:left">Analisar outro ativo…</span></button>`;
+  box.classList.remove("hide");
 }
 
 /* ---------- CARTEIRA ---------- */
