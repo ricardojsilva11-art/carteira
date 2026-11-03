@@ -1041,7 +1041,7 @@ function duplicadosProvaveis(){
 }
 function avisosDados(ps){
   const l = listaAvisos(ps); if (!l.length) return "";
-  return `<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><h2>A rever (${l.length})</h2>${l.map(x => `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 300px">${x.txt}</span>${x.btn || ""}</div>`).join("")}</div>`;
+  return `<div class="card" style="margin-bottom:14px;border-color:var(--warn)"><h2>A rever (${l.length})</h2>${l.map(x => `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 300px">${x.txt}</span><span class="hrow">${x.btn || ""}${x.id ? `<button class="btn sm ghost" data-id="${esc(x.id)}" onclick="ignorarAviso(this.dataset.id)" title="Esconder este aviso">Ignorar</button>` : ""}</span></div>`).join("")}</div>`;
 }
 function verAtivo(sym){
   const p = posicoes().find(x => x.sym === sym); if (!p) return;
@@ -1861,22 +1861,27 @@ function resumoBloco(){
 /* ---------- AVISOS SOBRE OS DADOS ---------- */
 function listaAvisos(ps){
   const out = [], hojeD = hoje();
-  duplicadosProvaveis().forEach(o => out.push({txt:`<strong>${esc(o.sym)}:</strong> a compra de ${String(o.qtd).replace(".", ",")} unidades de ${dataPT(o.data)} (adicionada à mão) parece repetir uma compra importada. Se for a mesma, apaga-a.`, btn:`<button class="btn sm" onclick="abrirOp('${o.id}')">Ver e apagar</button>`}));
-  ps.filter(p => p.semCompra).forEach(p => out.push({txt:`<strong>${esc(p.sym)}:</strong> ${p.semCompra.map(x => `venda de ${String(x.qtd).replace(".", ",")} unidades em ${dataPT(x.data)}`).join(", ")} sem compra registada antes. Falta o extrato mais antigo com essa compra; até lá, o ganho dessa venda não entra nas contas.`, btn:`<button class="btn sm" onclick="abrirImport()">Importar extrato</button>`}));
-  ps.filter(p => p.qtd > 0 && !p.temPreco).forEach(p => out.push({txt:`<strong>${esc(p.sym)}:</strong> sem preço de mercado. Confirma o símbolo (por exemplo, a bolsa certa).`, btn:`<button class="btn sm" onclick="verAtivo('${esc(p.sym)}')">Ver</button>`}));
+  duplicadosProvaveis().forEach(o => out.push({id:"dup:" + o.id, txt:`<strong>${esc(o.sym)}:</strong> a compra de ${String(o.qtd).replace(".", ",")} unidades de ${dataPT(o.data)} (adicionada à mão) parece repetir uma compra importada. Se for a mesma, apaga-a.`, btn:`<button class="btn sm" onclick="abrirOp('${o.id}')">Ver e apagar</button>`}));
+  ps.filter(p => p.semCompra).forEach(p => out.push({id:"semcompra:" + p.sym + ":" + p.semCompra.map(x => x.data + "/" + x.qtd).join(","), txt:`<strong>${esc(p.sym)}:</strong> ${p.semCompra.map(x => `venda de ${String(x.qtd).replace(".", ",")} unidades em ${dataPT(x.data)}`).join(", ")} sem compra registada antes. Falta o extrato mais antigo com essa compra; até lá, o ganho dessa venda não entra nas contas.`, btn:`<button class="btn sm" onclick="abrirImport()">Importar extrato</button>`}));
+  ps.filter(p => p.qtd > 0 && !p.temPreco).forEach(p => out.push({id:"sempreco:" + p.sym, txt:`<strong>${esc(p.sym)}:</strong> sem preço de mercado. Confirma o símbolo (por exemplo, a bolsa certa).`, btn:`<button class="btn sm" onclick="verAtivo('${esc(p.sym)}')">Ver</button>`}));
   const lim = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
   const porReg = pagamentos().filter(x => !x.registado && x.data < lim && x.data >= new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10));
-  if (porReg.length) out.push({txt:`${porReg.length} dividendo${porReg.length > 1 ? "s" : ""} detetado${porReg.length > 1 ? "s" : ""} no histórico ainda por registar (desde ${dataPT(porReg[porReg.length - 1].data)}). Importa o extrato mais recente ou regista-os.`, btn:`<a class="btn sm" href="#dividendos">Ver</a>`});
+  if (porReg.length) out.push({id:"divreg:" + porReg.length + ":" + porReg[0].data, txt:`${porReg.length} dividendo${porReg.length > 1 ? "s" : ""} detetado${porReg.length > 1 ? "s" : ""} no histórico ainda por registar (desde ${dataPT(porReg[porReg.length - 1].data)}). Importa o extrato mais recente ou regista-os.`, btn:`<a class="btn sm" href="#dividendos">Ver</a>`});
   corretoras().filter(c => c !== "Manual").forEach(c => {
     const ult = vivos("ops").filter(o => corretoraDe(o) === c).map(o => o.data).sort().pop();
     const temAberta = (() => { const f0 = FILTRO; FILTRO = c; const r = posicoes().some(p => p.qtd > 0); FILTRO = f0; return r; })();
-    if (ult && temAberta && ult < new Date(Date.now() - 40 * 864e5).toISOString().slice(0, 10)) out.push({txt:`Último movimento da <strong>${esc(c)}</strong> registado: ${dataPT(ult)}. Se compraste, vendeste ou recebeste dividendos depois, importa o extrato mais recente.`, btn:`<button class="btn sm" onclick="store.set('cart.corretora','${esc(c)}');abrirImport()">Importar</button>`});
+    if (ult && temAberta && ult < new Date(Date.now() - 40 * 864e5).toISOString().slice(0, 10)) out.push({id:"corretora:" + c + ":" + ult, txt:`Último movimento da <strong>${esc(c)}</strong> registado: ${dataPT(ult)}. Se compraste, vendeste ou recebeste dividendos depois, importa o extrato mais recente.`, btn:`<button class="btn sm" onclick="store.set('cart.corretora','${esc(c)}');abrirImport()">Importar</button>`});
   });
   const semCor = vivos("ops").filter(o => !o.origem).length;
-  if (semCor) out.push({txt:`${semCor} movimento${semCor > 1 ? "s" : ""} sem corretora. Indica a corretora para veres os valores separados.`, btn:`<a class="btn sm" href="#definicoes">Corretoras</a>`});
-  ps.filter(p => p.qtd > 0 && (ativo(p.sym) || {}).fonte === "pendente").forEach(p => out.push({txt:`<strong>${esc(p.sym)}:</strong> setores ainda por classificar.`, btn:`<button class="btn sm" onclick="reclassificar('${esc(p.sym)}')">Classificar</button>`}));
-  return out;
+  if (semCor) out.push({id:"semcor:" + semCor, txt:`${semCor} movimento${semCor > 1 ? "s" : ""} sem corretora. Indica a corretora para veres os valores separados.`, btn:`<a class="btn sm" href="#definicoes">Corretoras</a>`});
+  ps.filter(p => p.qtd > 0 && (ativo(p.sym) || {}).fonte === "pendente").forEach(p => out.push({id:"setores:" + p.sym, txt:`<strong>${esc(p.sym)}:</strong> setores ainda por classificar.`, btn:`<button class="btn sm" onclick="reclassificar('${esc(p.sym)}')">Classificar</button>`}));
+  /* avisos ignorados (guardados nas definições e sincronizados); se a situação mudar, o aviso volta a aparecer */
+  const ign = avisosIgn();
+  return out.filter(x => !x.id || !ign.includes(x.id));
 }
+const avisosIgn = () => Array.isArray(S.cfg.avisosIgn) ? S.cfg.avisosIgn : [];
+function ignorarAviso(id){ if (!id) return; setCfg("avisosIgn", avisosIgn().filter(x => x !== id).concat(id)); toast("Aviso ignorado. Podes voltar a mostrá-lo em Configurações."); }
+function reporAvisos(){ setCfg("avisosIgn", []); toast("Os avisos ignorados voltam a aparecer."); }
 
 /* ---------- EXPOSIÇÃO ---------- */
 function vExposicao(m){
@@ -2145,6 +2150,7 @@ function vDefinicoes(m){
     <h2 style="margin:6px 0 0">Os teus dados</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="exportar()">Cópia completa (JSON)</button><button class="btn" onclick="exportarCSV()">Movimentos (CSV)</button><label class="btn" style="cursor:pointer">Importar cópia (JSON)<input type="file" accept="application/json,.json" class="hide" onchange="importar(this.files[0]);this.value=''"></label></div>
     <p class="muted" style="font-size:12.5px;margin:0;line-height:1.5">O CSV abre no Excel. A importação mostra primeiro o que muda e nunca apaga nada. «Cópia completa (JSON)» é o backup manual.</p>
+    ${avisosIgn().length ? `<div class="hrow"><span class="muted" style="font-size:13px">${avisosIgn().length} aviso${avisosIgn().length > 1 ? "s" : ""} ignorado${avisosIgn().length > 1 ? "s" : ""} em «A rever»</span><button class="btn sm" onclick="reporAvisos()">Voltar a mostrar</button></div>` : ""}
     ${backupBloco()}
     ${copiasBloco()}
     <p class="muted" style="font-size:13px;margin:0;line-height:1.5">Versão 2 (Premium Finance). No iPhone: abre a app no Safari, toca em Partilhar › Adicionar ao ecrã principal.</p>
